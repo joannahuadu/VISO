@@ -1,6 +1,6 @@
 # Copyright (c) Tencent Inc. All rights reserved.
 import itertools
-from typing import List, Sequence, Tuple, Optional
+from typing import List, Sequence, Tuple
 import torch
 from torch import Tensor
 from torch.nn.modules.batchnorm import _BatchNorm
@@ -9,7 +9,7 @@ from mmyolo.registry import MODELS
 from mmdet.utils import OptMultiConfig, ConfigType
 from transformers import (AutoTokenizer, AutoModel, CLIPTextConfig)
 from transformers import CLIPTextModelWithProjection as CLIPTP
-import open_clip
+
 
 @MODELS.register_module()
 class HuggingVisionBackbone(BaseModule):
@@ -121,68 +121,6 @@ class HuggingCLIPLanguageBackbone(BaseModule):
         super().train(mode)
         self._freeze_modules()
 
-@MODELS.register_module()
-class OpenCLIPLanguageBackbone(BaseModule):
-
-    def __init__(self,
-                 model_name: str,
-                 pretrained: Optional[str] = None,
-                 frozen_modules: Sequence[str] = (),
-                 dropout: float = 0.0,
-                 training_use_cache: bool = False,
-                 init_cfg: OptMultiConfig = None) -> None:
-
-        super().__init__(init_cfg=init_cfg)
-
-        self.frozen_modules = frozen_modules
-        self.training_use_cache = training_use_cache
-        self.tokenizer = open_clip.get_tokenizer(model_name)
-        self.model = open_clip.create_model(model_name, pretrained)
-        self._freeze_modules()
-
-    def forward_tokenizer(self, texts):
-        if not hasattr(self, 'text'):
-            text = list(itertools.chain(*texts))
-            text = self.tokenizer(texts=text)
-            self.text = text.cuda()
-        return self.text
-
-    def forward(self, text: List[List[str]]) -> Tensor:
-        num_per_batch = [len(t) for t in text]
-        assert max(num_per_batch) == min(num_per_batch), (
-            'number of sequences not equal in batch')
-        text = list(itertools.chain(*text))
-        text = self.tokenizer(texts=text)
-        text = text.cuda()
-        txt_feats = self.model.encode_text(text, normalize=True)
-        txt_feats /= txt_feats.norm(dim=-1, keepdim=True)
-        txt_feats = txt_feats.reshape(-1, num_per_batch[0],
-                                      txt_feats.shape[-1])
-        return txt_feats
-
-    def _freeze_modules(self):
-
-        if len(self.frozen_modules) == 0:
-            # not freeze
-            return
-        if self.frozen_modules[0] == "all":
-            self.model.eval()
-            for _, module in self.model.named_modules():
-                module.eval()
-                for param in module.parameters():
-                    param.requires_grad = False
-            return
-        for name, module in self.model.named_modules():
-            for frozen_name in self.frozen_modules:
-                if name.startswith(frozen_name):
-                    module.eval()
-                    for param in module.parameters():
-                        param.requires_grad = False
-                    break
-
-    def train(self, mode=True):
-        super().train(mode)
-        self._freeze_modules()
 
 @MODELS.register_module()
 class PseudoLanguageBackbone(BaseModule):

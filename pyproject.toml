@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools","wheel","torch"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -28,21 +28,10 @@ classifiers = [
 requires-python = ">= 3.7"
 
 dependencies = [
-    "wheel",
-    "torch>=2.1.0",
-    "torchvision>=0.16.2",
-    "transformers",
-    "tokenizers",
-    "numpy",
-    "opencv-python",
-    "supervision==0.19.0",
-    "openmim",
-    "mmcv-lite>=2.0.0rc4",
-    "mmdet>=3.0.0",
+    "mmdet==3.0.0",
     "mmengine>=0.7.1",
-    "mmcv",
-    'mmyolo @ git+https://github.com/onuralpszr/mmyolo.git',
-
+    "openmim",
+    "mmcv==2.0.1",
 ]
 
 [tool.setuptools]

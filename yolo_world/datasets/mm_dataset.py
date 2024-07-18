@@ -9,11 +9,17 @@ from mmengine.dataset.base_dataset import (
         BaseDataset, Compose, force_full_init)
 from mmyolo.registry import DATASETS
 
+from collections.abc import Mapping
 
 @DATASETS.register_module()
 class MultiModalDataset:
     """Multi-modal dataset."""
 
+    PALETTE=[(165, 42, 42), (189, 183, 107), (0, 255, 0), (255, 0, 0),
+                    (138, 43, 226), (255, 128, 0), (255, 0, 255),
+                    (0, 255, 255), (255, 193, 193), (0, 51, 153),
+                    (255, 250, 205), (0, 139, 139), (255, 255, 0),
+                    (147, 116, 116), (0, 0, 255)]
     def __init__(self,
                  dataset: Union[BaseDataset, dict],
                  class_text_path: str = None,
@@ -21,6 +27,20 @@ class MultiModalDataset:
                  pipeline: List[Union[dict, Callable]] = [],
                  lazy_init: bool = False) -> None:
         self.dataset: BaseDataset
+        if class_text_path is not None:
+            self.class_texts = json.load(open(class_text_path, 'r'))
+            classes = tuple(item.replace(" ", "-") for sublist in self.class_texts for item in sublist)
+            metainfo = dict()
+            metainfo['classes'] = classes
+            # metainfo['palette'] = self.PALETTE[:len(self.class_texts)]
+            if dataset.get('metainfo') is not None:
+                print_log('metainfo will be overridden by class_texts'
+                        'and does not need to be set manually',
+                        logger='current',
+                        level=logging.WARNING)
+            dataset['metainfo'] = metainfo
+        else:
+            self.class_texts = None
         if isinstance(dataset, dict):
             self.dataset = DATASETS.build(dataset)
         elif isinstance(dataset, BaseDataset):
@@ -29,15 +49,17 @@ class MultiModalDataset:
             raise TypeError(
                 'dataset must be a dict or a BaseDataset, '
                 f'but got {dataset}')
-
-        if class_text_path is not None:
-            self.class_texts = json.load(open(class_text_path, 'r'))
-            # ori_classes = self.dataset.metainfo['classes']
-            # assert len(ori_classes) == len(self.class_texts), \
-            #     ('The number of classes in the dataset and the class text'
-            #      'file must be the same.')
-        else:
-            self.class_texts = None
+        print_log(self.dataset,
+                logger='current',
+                level=logging.INFO)
+        # if class_text_path is not None:
+            # self.class_texts = json.load(open(class_text_path, 'r'))
+        ori_classes = self.dataset.metainfo['classes']
+        assert len(ori_classes) == len(self.class_texts), \
+            ('The number of classes in the dataset and the class text'
+                'file must be the same.')
+        # else:
+            # self.class_texts = None
 
         self.test_mode = test_mode
         self._metainfo = self.dataset.metainfo
