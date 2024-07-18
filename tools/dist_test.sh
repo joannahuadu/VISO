@@ -9,7 +9,7 @@ PORT=${PORT:-29502}
 MASTER_ADDR=${MASTER_ADDR:-"127.0.0.1"}
 
 PYTHONPATH="$(dirname $0)/..":$PYTHONPATH \
-CUDA_VISIBLE_DEVICES="0,2,3,4,5,6,8,9" python -m torch.distributed.launch \
+CUDA_VISIBLE_DEVICES="7,0,2,3,4,5,6,8" python -m torch.distributed.launch \
     --nnodes=$NNODES \
     --node_rank=$NODE_RANK \
     --master_addr=$MASTER_ADDR \

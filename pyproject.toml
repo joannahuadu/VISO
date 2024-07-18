@@ -28,10 +28,19 @@ classifiers = [
 requires-python = ">= 3.7"
 
 dependencies = [
+    "wheel",
+    "transformers",
+    "tokenizers",
+    "numpy",
+    "opencv-python",
+    "supervision==0.19.0",
+    "openmim",
     "mmdet==3.0.0",
     "mmengine>=0.7.1",
     "openmim",
     "mmcv==2.0.1",
+    'mmyolo @ git+https://github.com/onuralpszr/mmyolo.git',
+
 ]
 
 [tool.setuptools]
