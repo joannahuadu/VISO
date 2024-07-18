@@ -6,11 +6,13 @@ from .mm_backbone import (
     MultiModalYOLOBackbone,
     HuggingVisionBackbone,
     HuggingCLIPLanguageBackbone,
-    PseudoLanguageBackbone)
+    PseudoLanguageBackbone,
+    OpenCLIPLanguageBackbone)
 
 __all__ = [
     'MultiModalYOLOBackbone',
     'HuggingVisionBackbone',
     'HuggingCLIPLanguageBackbone',
-    'PseudoLanguageBackbone'
+    'PseudoLanguageBackbone',
+    'OpenCLIPLanguageBackbone'
 ]

@@ -46,7 +46,7 @@ def reparameterize_head(state_dict, embeds):
         del state_dict[cls_layers[i] + '.logit_scale']
     return state_dict
 
-
+# 这个颜色是我自己加的，用来标记我修改的地方
 def convert_neck_split_conv(input_state_dict, block_name, text_embeds,
                             num_heads):
     if block_name + '.guide_fc.weight' not in input_state_dict:
