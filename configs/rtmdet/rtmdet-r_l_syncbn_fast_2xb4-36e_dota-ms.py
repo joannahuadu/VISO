@@ -1,7 +1,7 @@
 _base_ = './rtmdet-r_l_syncbn_fast_2xb4-36e_dota.py'
 
 # ========================modified parameters======================
-data_root = '/public/home/wang_mq22/workplace/YOLO-World/data/split_ms_dota/'
+data_root = 'data/split_ms_dota/'
 # Path of test images folder
 test_data_prefix = 'test/images/'
 # Submission dir for result submit

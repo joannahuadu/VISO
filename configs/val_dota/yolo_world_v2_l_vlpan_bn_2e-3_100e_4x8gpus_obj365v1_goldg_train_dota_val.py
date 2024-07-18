@@ -143,7 +143,7 @@ test_pipeline = [
     #     allow_scale_up=False,
     #     pad_val=dict(img=114)),
     dict(type='mmdet.LoadAnnotations', with_bbox=True, box_type='qbox'),
-    # dict(type='ConvertBoxType', box_type_mapping=dict(gt_bboxes='hbox')),
+    # dict(type='mmrotate.ConvertBoxType', box_type_mapping=dict(gt_bboxes='hbox')),
     dict(type='LoadText'),
     dict(
         type='mmdet.PackDetInputs',
@@ -164,18 +164,18 @@ dota_val_dataset = dict(
     type='MultiModalDataset',
     dataset=dict(
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota/',
+        data_root='data/split_ss_dota/',
         test_mode=True,
         ann_file='val/annfiles/',
-        data_prefix=dict(img='val/images/'),
+         data_prefix=dict(img_path='val/images/'),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v1_class_texts.json',
+    class_text_path='data/texts/dota_v1_class_texts.json',
     pipeline=test_pipeline)
 val_dataloader = dict(dataset=dota_val_dataset)
 test_dataloader = val_dataloader
 
-# val_evaluator = dict(_delete_=True, type='DOTAMetric', metric='mAP')
-val_evaluator = dict(_delete_=True, type='DOTAMetric', metric='mAP', iou_thrs=0.2, predict_box_type='qbox')
+# val_evaluator = dict(_delete_=True, type='mmrotate.DOTAMetric', metric='mAP')
+val_evaluator = dict(_delete_=True, type='mmrotate.DOTAMetric', metric='mAP', iou_thrs=0.2, predict_box_type='qbox')
 test_evaluator = val_evaluator
 
 # training settings

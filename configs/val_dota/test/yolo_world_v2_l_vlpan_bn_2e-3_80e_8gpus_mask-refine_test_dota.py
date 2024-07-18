@@ -19,11 +19,11 @@ dota_test_dataset = dict(
     type='MultiModalDataset',
     dataset=dict(
         type='YOLOv5DOTADataset',
-        data_root='/public/home/wang_mq22/workplace/YOLO-World/data/split_ss_dota/',
+        data_root='data/split_ss_dota/',
         test_mode=True,
         data_prefix=dict(img='test/images/'),
         batch_shapes_cfg=None),
-    class_text_path='/public/home/wang_mq22/workplace/YOLO-World/data/texts/dota_v1_class_texts.json',
+    class_text_path='data/texts/dota_v1_class_texts.json',
     pipeline=test_pipeline)
 
 test_dataloader = dict(
@@ -35,7 +35,7 @@ test_dataloader = dict(
     dataset=dota_test_dataset)
 
 test_evaluator = dict(
-    type='DOTAMetric',
+    type='mmrotate.DOTAMetric',
     format_only=True,
     merge_patches=True,
-    outfile_prefix='/public/home/wang_mq22/workplace/YOLO-World/work_dirs/yolo_world_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota/20240712_223320/Task1')
+    outfile_prefix='work_dirs/yolo_world_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota/20240707_195659/Task1')

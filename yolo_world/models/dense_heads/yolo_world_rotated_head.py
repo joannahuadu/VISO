@@ -209,7 +209,7 @@ class YOLOWorldRotatedHead(YOLOWorldHead):
                 head_module: ConfigType,
                 angle_version: str = 'le90', 
                 use_hbbox_loss: bool = False, 
-                angle_coder: ConfigType = dict(type='PseudoAngleCoder'),
+                angle_coder: ConfigType = dict(type='mmrotate.PseudoAngleCoder'),
                 loss_angle: OptConfigType = None,
                 *args, **kwargs) -> None:
         if not MMROTATE_AVAILABLE:
