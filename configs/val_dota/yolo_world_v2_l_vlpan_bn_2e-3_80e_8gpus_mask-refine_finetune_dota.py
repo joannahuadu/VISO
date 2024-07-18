@@ -18,7 +18,7 @@ base_lr = 2e-3
 weight_decay = 0.05
 train_batch_size_per_gpu = 4
 # load_from = 'pretrained_models/yolo_world_l_clip_t2i_bn_2e-3adamw_32xb16-100e_obj365v1_goldg_cc3mlite_train-ca93cd1f.pth'
-load_from = "/mnt/data1/workspace/wmq/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
+load_from = "weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
 text_model_name = 'openai/clip-vit-base-patch32'
 persistent_workers = False
@@ -155,10 +155,10 @@ pre_transform = [
 #     dict(type='mmdet.RandomFlip',
 #          prob=0.75,
 #          direction=['horizontal', 'vertical', 'diagonal']),
-#     dict(type='RandomRotate',
+#     dict(type='mmrotate.RandomRotate',
 #          prob=0.5,
 #          angle_range=180,
-#          rotate_type='Rotate',
+#          rotate_type='mmrotate.Rotate',
 #          rect_obj_labels=[9, 11]), 
 #     dict(type='mmdet.Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
 #     dict(type='RegularizeRotatedBox',
@@ -262,12 +262,12 @@ dota_train_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota/',
+        data_root='data/split_ss_dota/',
         ann_file='trainval/annfiles/',
-        data_prefix=dict(img='trainval/images/'),
+        data_prefix=dict(img_path='trainval/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v1_class_texts.json',
+    class_text_path='data/texts/dota_v1_class_texts.json',
     pipeline=train_pipeline)
 
 train_dataloader = dict(
@@ -310,14 +310,14 @@ dota_val_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota/',
+        data_root='data/split_ss_dota/',
         test_mode=True,
         ann_file='trainval/annfiles/',
-        data_prefix=dict(img='trainval/images/'),
+        data_prefix=dict(img_path='trainval/images/'),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v1_class_texts.json',
-    # class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v1_class_prompts.json',
-    # class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v1_class_texts_plane.json',
+    class_text_path='data/texts/dota_v1_class_texts.json',
+    # class_text_path='data/texts/dota_v1_class_prompts.json',
+    # class_text_path='data/texts/dota_v1_class_texts_plane.json',
     pipeline=test_pipeline)
 val_dataloader = dict(dataset=dota_val_dataset)
 test_dataloader = val_dataloader
@@ -373,7 +373,7 @@ optim_wrapper = dict(
 #     ann_file='data/coco/annotations/instances_val2017.json',
 #     metric='bbox')
 
-# visualizer = dict(type='RotLocalVisualizer')
+# visualizer = dict(type='mmrotate.RotLocalVisualizer')
 vis_backends = [dict(type='LocalVisBackend')]  # refer to https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html
 visualizer = dict(
     type='mmrotate.RotLocalVisualizer', vis_backends=vis_backends, name='visualizer')

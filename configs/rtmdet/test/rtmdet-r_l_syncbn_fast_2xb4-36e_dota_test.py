@@ -29,4 +29,4 @@ test_evaluator = dict(
     type='mmrotate.DOTAMetric',
     format_only=True,
     merge_patches=True,
-    outfile_prefix='/mnt/data1/workspace/wmq/YOLO-World/work_dirs/rtmdet-r_l_syncbn_fast_2xb4-36e_dota/20240707_201328/Task1')
+    outfile_prefix='work_dirs/rtmdet-r_l_syncbn_fast_2xb4-36e_dota/20240707_201328/Task1')
