@@ -373,7 +373,7 @@ optim_wrapper = dict(
 #     ann_file='data/coco/annotations/instances_val2017.json',
 #     metric='bbox')
 
-# visualizer = dict(type='RotLocalVisualizer')
+# visualizer = dict(type='mmrotate.RotLocalVisualizer')
 vis_backends = [dict(type='LocalVisBackend')]  # refer to https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html
 visualizer = dict(
     type='mmrotate.RotLocalVisualizer', vis_backends=vis_backends, name='visualizer')
