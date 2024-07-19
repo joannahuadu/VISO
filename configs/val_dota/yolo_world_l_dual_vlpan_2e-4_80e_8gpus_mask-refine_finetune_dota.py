@@ -295,4 +295,4 @@ optim_wrapper = dict(
 #     ann_file='data/coco/annotations/instances_val2017.json',
 #     metric='bbox')
 
-visualizer = dict(type='RotLocalVisualizer')
+visualizer = dict(type='mmrotate.RotLocalVisualizer')
