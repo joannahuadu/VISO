@@ -12,4 +12,5 @@ path_to_your_checkpoints = 'weights/models--chendelong--RemoteCLIP/snapshots/bf1
 
 ckpt = torch.load(f"{path_to_your_checkpoints}/RemoteCLIP-{model_name}.pt", map_location="cpu")
 message = model.load_state_dict(ckpt)
+print(message.haha)
 model = model.cuda().eval()
