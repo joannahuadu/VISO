@@ -1,6 +1,6 @@
 _base_ = (
     '../../third_party/mmyolo/configs/yolov8/'
-    'yolov8_x_mask-refine_syncbn_fast_8xb16-500e_coco.py')
+    'yolov8_l_mask-refine_syncbn_fast_8xb16-500e_coco.py')
 custom_imports = dict(
     imports=['yolo_world'],
     allow_failed_imports=False)
@@ -8,7 +8,7 @@ custom_imports = dict(
 # hyper-parameters
 num_classes = 15
 num_training_classes = 15
-max_epochs = 100  # Maximum training epochs
+max_epochs = 80  # Maximum training epochs
 close_mosaic_epochs = 10
 save_epoch_intervals = 5
 text_channels = 512
@@ -16,11 +16,11 @@ neck_embed_channels = [128, 256, _base_.last_stage_out_channels // 2]
 neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
 base_lr = 2e-3
 weight_decay = 0.05
-train_batch_size_per_gpu = 4
+train_batch_size_per_gpu = 16
 # load_from = 'pretrained_models/yolo_world_l_clip_t2i_bn_2e-3adamw_32xb16-100e_obj365v1_goldg_cc3mlite_train-ca93cd1f.pth'
-# load_from = "weights/yolo_world_v2_x_obj365v1_goldg_cc3mlite_pretrain_1280ft-14996a36.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
-text_model_name = 'openai/clip-vit-base-patch32'
+# text_model_name = 'openai/clip-vit-base-patch32'
+text_model_name = '/public/home/wang_mq22/workplace/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268'
 persistent_workers = False
 
 img_scale = (1024, 1024)
@@ -155,10 +155,10 @@ pre_transform = [
 #     dict(type='mmdet.RandomFlip',
 #          prob=0.75,
 #          direction=['horizontal', 'vertical', 'diagonal']),
-#     dict(type='mmrotate.RandomRotate',
+#     dict(type='RandomRotate',
 #          prob=0.5,
 #          angle_range=180,
-#          rotate_type='mmrotate.Rotate',
+#          rotate_type='Rotate',
 #          rect_obj_labels=[9, 11]), 
 #     dict(type='mmdet.Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
 #     dict(type='RegularizeRotatedBox',
@@ -260,12 +260,14 @@ dota_train_dataset = dict(
     _delete_=True,
     type='MultiModalDataset',
     dataset=dict(
+        _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='data/split_ss_dota/',
+        data_root='/public/home/wang_mq22/workplace/YOLO-World/data/split_ss_dota/',
         ann_file='trainval/annfiles/',
-        data_prefix=dict(img_path='trainval/images/'),
+        data_prefix=dict(img='trainval/images/'),
+        filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='data/texts/dota_v1_class_texts.json',
+    class_text_path='/public/home/wang_mq22/workplace/YOLO-World/data/texts/dota_v1_class_texts.json',
     pipeline=train_pipeline)
 
 train_dataloader = dict(
@@ -306,13 +308,14 @@ dota_val_dataset = dict(
     _delete_=True,
     type='MultiModalDataset',
     dataset=dict(
+        _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='data/split_ss_dota/',
+        data_root='/public/home/wang_mq22/workplace/YOLO-World/data/split_ss_dota/',
         test_mode=True,
         ann_file='trainval/annfiles/',
-        data_prefix=dict(img_path='trainval/images/'),
+        data_prefix=dict(img='trainval/images/'),
         batch_shapes_cfg=None),
-    class_text_path='data/texts/dota_v1_class_texts.json',
+    class_text_path='/public/home/wang_mq22/workplace/YOLO-World/data/texts/dota_v1_class_texts.json',
     pipeline=test_pipeline)
 val_dataloader = dict(dataset=dota_val_dataset)
 test_dataloader = val_dataloader
@@ -328,8 +331,8 @@ default_hooks = dict(
         lr_factor=0.01,
         max_epochs=max_epochs),
     checkpoint=dict(
-        max_keep_ckpts=-1,
-        save_best=None,
+        max_keep_ckpts=3,
+        save_best='auto',
         interval=save_epoch_intervals))
 custom_hooks = [
     dict(
@@ -368,7 +371,7 @@ optim_wrapper = dict(
 #     ann_file='data/coco/annotations/instances_val2017.json',
 #     metric='bbox')
 
-# visualizer = dict(type='mmrotate.RotLocalVisualizer')
+# visualizer = dict(type='RotLocalVisualizer')
 vis_backends = [dict(type='LocalVisBackend')]  # refer to https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html
 visualizer = dict(
     type='mmrotate.RotLocalVisualizer', vis_backends=vis_backends, name='visualizer')
