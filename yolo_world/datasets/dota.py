@@ -56,7 +56,7 @@ class DOTADataset(BaseDataset):
         data_list = []
         if self.ann_file == '':
             img_files = glob.glob(
-                osp.join(self.data_prefix['img'], f'*.{self.img_suffix}'))
+                osp.join(self.data_prefix['img_path'], f'*.{self.img_suffix}'))
             for img_path in img_files:
                 data_info = {}
                 data_info['img_path'] = img_path
@@ -81,7 +81,7 @@ class DOTADataset(BaseDataset):
                 data_info['img_id'] = img_id
                 img_name = img_id + f'.{self.img_suffix}'
                 data_info['file_name'] = img_name
-                data_info['img_path'] = osp.join(self.data_prefix['img'],
+                data_info['img_path'] = osp.join(self.data_prefix['img_path'],
                                                  img_name)
 
                 instances = []

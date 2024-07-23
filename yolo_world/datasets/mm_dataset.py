@@ -49,7 +49,9 @@ class MultiModalDataset:
             raise TypeError(
                 'dataset must be a dict or a BaseDataset, '
                 f'but got {dataset}')
-
+        print_log(self.dataset,
+                logger='current',
+                level=logging.INFO)
         # if class_text_path is not None:
             # self.class_texts = json.load(open(class_text_path, 'r'))
         ori_classes = self.dataset.metainfo['classes']

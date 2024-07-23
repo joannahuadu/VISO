@@ -65,7 +65,7 @@ class MaxSigmoidAttnBlock(BaseModule):
                                  norm_cfg=norm_cfg,
                                  act_cfg=None)
 
-    def forward(self, x: Tensor, guide: Tensor) -> Tensor:
+    def forward(self, x: Tensor, guide: Tensor, attn: bool=False) -> Tensor:
         """Forward process."""
         B, _, H, W = x.shape
 
@@ -89,12 +89,18 @@ class MaxSigmoidAttnBlock(BaseModule):
         attn_weight = attn_weight / (self.head_channels**0.5)
         attn_weight = attn_weight + self.bias[None, :, None, None]
         attn_weight = attn_weight.sigmoid() * self.scale
-
-        x = self.project_conv(x)
-        x = x.reshape(B, self.num_heads, -1, H, W)
-        x = x * attn_weight.unsqueeze(2)
-        x = x.reshape(B, -1, H, W)
-        return x
+        
+        if attn: 
+            x = x.reshape(B, self.num_heads, -1, H, W)
+            x = x * attn_weight.unsqueeze(2)
+            x = x.reshape(B, -1, H, W)
+            return x, attn_weight
+        else:
+            x = self.project_conv(x)
+            x = x.reshape(B, self.num_heads, -1, H, W)
+            x = x * attn_weight.unsqueeze(2)
+            x = x.reshape(B, -1, H, W)
+            return x
 
 
 @MODELS.register_module()
