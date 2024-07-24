@@ -62,7 +62,7 @@ class YOLOWorldPAFPNSP(YOLOWorldPAFPN):
         # reduce layers
         reduce_outs = []
         for idx in range(len(self.in_channels)):
-            reduce_outs.append(self.reduce_layers[idx](img_feats[idx], txt_feats, attn=True))
+            reduce_outs.append(self.reduce_layers[idx](img_feats[idx], txt_feats))
             
         # top-down path
         inner_outs = [reduce_outs[-1][0]]

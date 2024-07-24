@@ -24,6 +24,7 @@ from mmyolo.registry import MODELS, TASK_UTILS
 from mmyolo.models.dense_heads import YOLOv8HeadModule
 from mmyolo.models.utils import gt_instances_preprocess
 from mmcv.cnn.bricks import build_norm_layer
+import cv2
 from .yolo_world_head import BNContrastiveHead, ContrastiveHead, YOLOWorldHead
 try:
     from mmrotate.structures.bbox import RotatedBoxes, distance2obb
@@ -958,7 +959,9 @@ class YOLOWorldRotatedSPHead(YOLOWorldRotatedHead):
         losses = self.loss_by_feat(*loss_inputs)
 
         return losses
-    
+    # def get_mask_gt(self, batch_gt_instances: Sequence[InstanceData],
+                    
+                    
     def loss_by_feat(
             self,
             cls_scores: Sequence[Tensor],
@@ -982,6 +985,8 @@ class YOLOWorldRotatedSPHead(YOLOWorldRotatedHead):
                 num_priors * 4.
             angle_preds (list[Tensor]): Angle prediction for each scale
                 level with shape (N, num_priors?? * angle_out_dim, H, W).
+            attn_preds (list[Tensor]): Attention prediction for each scale
+                level with shape (N, 1, H, W).
             bbox_dist_preds?? (Sequence[Tensor]): Box distribution logits for
                 each scale level with shape (bs, reg_max + 1, H*W, 4).
             angle_dist_preds?? (Sequence[Tensor]): ??.
@@ -1022,20 +1027,20 @@ class YOLOWorldRotatedSPHead(YOLOWorldRotatedHead):
         # gt info
         gt_info = gt_instances_preprocess(batch_gt_instances, num_imgs)
         gt_labels = gt_info[:, :, :1]
-        gt_bboxes = gt_info[:, :, 1:]  # xywha
-        pad_bbox_flag = (gt_bboxes.sum(-1, keepdim=True) > 0).float()
+        gt_bboxes = gt_info[:, :, 1:]  # xywha [batch, num_pred, 5]
+        pad_bbox_flag = (gt_bboxes.sum(-1, keepdim=True) > 0).float() #num_pred中有pad的
 
         # pred info
-        flatten_cls_scores = [
+        flatten_cls_scores = [ # Sequence(Tensor[batch, flatten_featmap_size, num_classes]), len(seq)=num_levels 
             cls_score.permute(0, 2, 3, 1).reshape(num_imgs, -1,
                                                  self.num_classes)
             for cls_score in cls_scores
         ]
-        flatten_tblrs = [
+        flatten_tblrs = [ # Sequence(Tensor[batch, flatten_featmap_size, 4]), len(seq)=num_levels
             bbox_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1, 4)
             for bbox_pred in bbox_preds
         ]
-        flatten_angles = [
+        flatten_angles = [ # Sequence(Tensor[batch, flatten_featmap_size, 1]), len(seq)=num_levels
             angle_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1, self.angle_out_dim) 
             for angle_pred in angle_preds
         ]
@@ -1050,14 +1055,14 @@ class YOLOWorldRotatedSPHead(YOLOWorldRotatedHead):
         flatten_cls_scores = torch.cat(flatten_cls_scores, dim=1)
         flatten_tblrs = torch.cat(flatten_tblrs, dim=1)
         flatten_tblrs = flatten_tblrs * self.flatten_priors_train[..., -1,
-                                                                  None]
+                                                                  None] # scale to original image size
         flatten_angles = torch.cat(flatten_angles, dim=1)
         flatten_decoded_angle = self.angle_coder.decode(
             flatten_angles, keepdim=True)
         
         flatten_tblra = torch.cat([flatten_tblrs, flatten_decoded_angle],
                                   dim=-1)
-        flatten_rbboxes = distance2obb(
+        flatten_rbboxes = distance2obb( # [batch, flatten_featmap_size, 5], obb means (left, top, right, bottom, angle)
             self.flatten_priors_train[..., :2],
             flatten_tblra,
             angle_version=self.angle_version)
@@ -1098,8 +1103,8 @@ class YOLOWorldRotatedSPHead(YOLOWorldRotatedHead):
 
         if len(pos_inds) > 0:
             loss_bbox = self.loss_bbox(
-                bbox_preds[pos_inds],
-                pos_bbox_targets,
+                bbox_preds[pos_inds], # [num_foreground, 5]
+                pos_bbox_targets, # [num_foreground, 5]
                 weight=assign_metrics[pos_inds],
                 avg_factor=avg_factor)
             loss_angle = angle_preds.sum() * 0
@@ -1114,19 +1119,27 @@ class YOLOWorldRotatedSPHead(YOLOWorldRotatedHead):
         else:
             loss_bbox = bbox_preds.sum() * 0
             loss_angle = angle_preds.sum() * 0
-
+        
+        # cal mask loss
+        
+        mask_gt = self.get_mask_gt(gt_bboxes, self.featmap_sizes_train, self.featmap_strides)
+        loss_mask = self.cal_loss_mask(attn_preds, mask_gt)
+        # loss_mask = 
+        
         # ?? world_size, num_imgs
         if self.world_size == -1:
             _, world_size = get_dist_info()
         else:
             world_size = self.world_size
         # ?? why *num_imgs * world_size
+        # ! 因为这个框架采用了学习率 自动缩放，在算步长的时候会 除以 (num_gpu * batch_per_gpu)， 因此每一个loss都要乘以这个值
         losses = dict()
         losses['loss_cls'] = loss_cls * num_imgs * world_size
         losses['loss_bbox'] = loss_bbox * num_imgs * world_size
         if self.loss_angle is not None:
             losses['loss_angle'] = loss_angle * num_imgs * world_size
-        #TODO losses['loss_mask']
+        losses['loss_mask'] = loss_mask * num_imgs * world_size
+        
         return losses
         # return dict(
         #     loss_cls=loss_cls * num_imgs * world_size,
@@ -1335,3 +1348,86 @@ class YOLOWorldRotatedSPHead(YOLOWorldRotatedHead):
 
             results_list.append(results)
         return results_list
+    
+    def get_mask_gt(self, gt_bboxes, featmap_sizes, featmap_strides):
+        '''
+        intput:
+        gt_bboxes: [batch, num_pred, 5], 5 means (x, y, w, h, a), a \in [-pi/2, pi/2]，这里的x y 是左上角的点
+        featmap_sizes: Sequence[tensor[H, W]], len(seq)=num_levels
+        featmap_strides: Sequence[tensor[int]], len(seq)=num_levels
+        
+        output:
+        mask_gt: list([batch, 1, H, W]), len(seq)=num_levels
+        
+        将gt_bboxes转成实例分割的mask，输出的mask的大小为[H, W]，如果特征图上的点对应有物体，则mask上的点为1，否则为0
+        '''
+        batch_size, num_pred, _ = gt_bboxes.shape
+        device = gt_bboxes.device
+        num_levels = len(featmap_sizes)
+        
+        mask_gt = []
+        
+        for level, (featmap_size, stride) in enumerate(zip(featmap_sizes, featmap_strides)):
+            H, W = featmap_size
+            mask_level = torch.zeros((batch_size, num_pred, H, W), device=device)
+            scale_factor = torch.tensor([1/stride, 1/stride, 1/stride, 1/stride, 1], device=device)
+            scaled_bboxes = gt_bboxes * scale_factor[None, None, :]
+            
+            for b in range(batch_size):
+                for n in range(num_pred):
+                    x, y, w, h, angle = scaled_bboxes[b, n].cpu().numpy()
+                    
+                    # 计算旋转后的左上角到中心点的向量
+                    cos_a, sin_a = np.cos(angle), np.sin(angle)
+                    vector_to_center = np.array([
+                        w/2 * cos_a - h/2 * sin_a,
+                        w/2 * sin_a + h/2 * cos_a
+                    ])
+                    
+                    # 计算中心点坐标
+                    center_x = x + vector_to_center[0]
+                    center_y = y + vector_to_center[1]
+                    
+                    angle_deg = np.degrees(angle)
+                    
+                    rect = ((center_x, center_y), (w, h), angle_deg)
+                    box = cv2.boxPoints(rect)
+                    
+                    box = np.int0(box)
+                    
+                    mask = np.zeros((H, W), dtype=np.uint8)
+                    cv2.fillPoly(mask, [box], 1)
+                    
+                    mask_level[b, n] = torch.from_numpy(mask).to(device)
+            mask_gt.append(mask_level)
+        
+        return mask_gt
+
+    def cal_loss_mask(self, attn_preds, mask_gt):
+        '''
+        计算mask loss, 使用二元交叉熵损失(BCE loss)
+        
+        input:
+        attn_preds: list([batch, 1, H, W]), len(list)=num_levels
+        mask_gt: list([batch, 1, H, W]), len(list)=num_levels
+        
+        output:
+        loss_mask: tensor[1]
+        '''
+        num_levels = len(attn_preds)
+        device = attn_preds[0].device
+        total_loss = torch.tensor(0., device=device)
+        
+        for level in range(num_levels):
+            pred = attn_preds[level]
+            target = mask_gt[level]
+            
+            assert pred.shape[2:] == target.shape[2:]
+            target = target.sum(dim=1, keepdim=True).clamp(0, 1) # 这个不需要
+            
+            loss = F.binary_cross_entropy(pred, target, reduction='mean')
+            
+            total_loss += loss
+        
+        avg_loss = total_loss / num_levels
+        return avg_loss

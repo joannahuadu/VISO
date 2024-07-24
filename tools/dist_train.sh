@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 
 CONFIG=$1
-GPUS=$2
+CUDA_VISIBLE_DEVICES=$2
+DEBUG=$3
 NNODES=${NNODES:-1}
 NODE_RANK=${NODE_RANK:-0}
 PORT=${MASTER_PORT:-29501}
 MASTER_ADDR=${MASTER_ADDR:-"127.0.0.1"}
 
+IFS=',' read -ra ADDR <<< "$CUDA_VISIBLE_DEVICES"
+GPUS=${#ADDR[@]}
+
 PYTHONPATH="$(dirname $0)/..":$PYTHONPATH \
-CUDA_VISIBLE_DEVICES="5,6,8,9" CUDA_LAUNCH_BLOCKING=1 python -m torch.distributed.launch \
+CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES CUDA_LAUNCH_BLOCKING=1 torchrun \
     --nnodes=$NNODES \
     --node_rank=$NODE_RANK \
     --master_addr=$MASTER_ADDR \
@@ -16,4 +20,5 @@ CUDA_VISIBLE_DEVICES="5,6,8,9" CUDA_LAUNCH_BLOCKING=1 python -m torch.distribute
     --master_port=$PORT \
     $(dirname "$0")/train.py \
     $CONFIG \
-    --launcher pytorch ${@:3}
+    --launcher pytorch ${@:4} \
+    --debug $DEBUG

@@ -31,7 +31,8 @@ class MaxSigmoidAttnBlock(BaseModule):
                                              momentum=0.03,
                                              eps=0.001),
                  init_cfg: OptMultiConfig = None,
-                 use_einsum: bool = True) -> None:
+                 use_einsum: bool = True,
+                 attn: bool = False) -> None:
         super().__init__(init_cfg=init_cfg)
         conv = DepthwiseSeparableConvModule if use_depthwise else ConvModule
 
@@ -55,17 +56,18 @@ class MaxSigmoidAttnBlock(BaseModule):
             self.scale = nn.Parameter(torch.ones(1, num_heads, 1, 1))
         else:
             self.scale = 1.0
+        self.attn = attn
+        if not attn:
+            self.project_conv = conv(in_channels,
+                                    out_channels,
+                                    kernel_size,
+                                    stride=1,
+                                    padding=padding,
+                                    conv_cfg=conv_cfg,
+                                    norm_cfg=norm_cfg,
+                                    act_cfg=None)
 
-        self.project_conv = conv(in_channels,
-                                 out_channels,
-                                 kernel_size,
-                                 stride=1,
-                                 padding=padding,
-                                 conv_cfg=conv_cfg,
-                                 norm_cfg=norm_cfg,
-                                 act_cfg=None)
-
-    def forward(self, x: Tensor, guide: Tensor, attn: bool=False) -> Tensor:
+    def forward(self, x: Tensor, guide: Tensor) -> Tensor:
         """Forward process."""
         B, _, H, W = x.shape
 
@@ -90,7 +92,7 @@ class MaxSigmoidAttnBlock(BaseModule):
         attn_weight = attn_weight + self.bias[None, :, None, None]
         attn_weight = attn_weight.sigmoid() * self.scale
         
-        if attn: 
+        if self.attn: 
             x = x.reshape(B, self.num_heads, -1, H, W)
             x = x * attn_weight.unsqueeze(2)
             x = x.reshape(B, -1, H, W)
@@ -122,7 +124,8 @@ class RepMatrixMaxSigmoidAttnBlock(BaseModule):
                                              momentum=0.03,
                                              eps=0.001),
                  init_cfg: OptMultiConfig = None,
-                 use_einsum: bool = True) -> None:
+                 use_einsum: bool = True,
+                 ) -> None:
         super().__init__(init_cfg=init_cfg)
         conv = DepthwiseSeparableConvModule if use_depthwise else ConvModule
 
