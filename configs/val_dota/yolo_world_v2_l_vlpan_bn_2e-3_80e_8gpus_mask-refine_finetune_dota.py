@@ -10,7 +10,7 @@ num_classes = 15
 num_training_classes = 15
 max_epochs = 200  # Maximum training epochs
 close_mosaic_epochs = 10
-save_epoch_intervals = 5
+save_epoch_intervals = 5 
 text_channels = 512
 neck_embed_channels = [128, 256, _base_.last_stage_out_channels // 2]
 neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
@@ -18,7 +18,7 @@ base_lr = 2e-3
 weight_decay = 0.05
 train_batch_size_per_gpu = 4
 # load_from = 'pretrained_models/yolo_world_l_clip_t2i_bn_2e-3adamw_32xb16-100e_obj365v1_goldg_cc3mlite_train-ca93cd1f.pth'
-load_from = "/mnt/data1/workspace/wmq/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
+load_from = "/home/becool1/wd/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
 text_model_name = 'openai/clip-vit-base-patch32'
 # text_model_name = '/public/home/wang_mq22/workplace/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268'
@@ -263,12 +263,12 @@ dota_train_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota/',
+        data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
         ann_file='trainval/annfiles/',
         data_prefix=dict(img_path='trainval/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v1_class_texts.json',
+    class_text_path='/home/becool1/wd/YOLO-World/data/texts/dota_v1_class_texts.json',
     pipeline=train_pipeline)
 
 train_dataloader = dict(
@@ -311,12 +311,12 @@ dota_val_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota/',
+        data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
         test_mode=True,
         ann_file='trainval/annfiles/',
         data_prefix=dict(img_path='trainval/images/'),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v1_class_texts.json',
+    class_text_path='/home/becool1/wd/YOLO-World/data/texts/dota_v1_class_texts.json',
     # class_text_path='data/texts/dota_v1_class_prompts.json',
     # class_text_path='data/texts/dota_v1_class_texts_plane.json',
     pipeline=test_pipeline)
