@@ -21,7 +21,7 @@ class YOLOWorldPAFPNSP(YOLOWorldPAFPN):
     def __init__(self,
                 #  reduce_embed_channels: List[int],
                  reduce_num_heads: List[int],
-                 reduce_block_cfg: ConfigType = dict(type='MaxSigmoidAttnBlockSP'),
+                 reduce_block_cfg: ConfigType = dict(type='KnowledgeAttnBlock'),
                  *args, **kwargs) -> None:
         # self.reduce_embed_channels = reduce_embed_channels
         self.reduce_num_heads = reduce_num_heads
@@ -163,7 +163,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPNSP):
         # reduce layers
         reduce_outs = []
         for idx in range(len(self.in_channels)):
-            reduce_outs.append(self.reduce_layers[idx](img_feats[idx], txt_feats, attn=True))
+            reduce_outs.append(self.reduce_layers[idx](img_feats[idx], txt_feats))
         
         sparse_reduce_outs = []
         for idx in range(len(self.in_channels)):
@@ -172,7 +172,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPNSP):
             
         # top-down path
         inner_outs = [reduce_outs[-1][0]]
-        inner_attns = [reduce_outs[-1][1]]
+        inner_attns = [sparse_reduce_outs[-1].indices]
         for idx in range(len(self.in_channels) - 1, 0, -1):
             feat_high = inner_outs[0]
             inner_attn = inner_attns[0]
@@ -181,24 +181,29 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPNSP):
                                                  idx](feat_high)
             upsample_feat = self._make_sparse_tensor(upsample_feat, inner_attn, project=True)
             if self.upsample_feats_cat_first:
-                top_down_layer_inputs = self._concat(upsample_feat, feat_low)
+                top_down_layer_inputs, inner_attn = self._concat(upsample_feat, feat_low)
                 # top_down_layer_inputs = torch.cat([upsample_feat, feat_low], 1)
             else:
-                top_down_layer_inputs = self._concat(feat_low, upsample_feat)
+                top_down_layer_inputs, inner_attn = self._concat(feat_low, upsample_feat)
                 # top_down_layer_inputs = torch.cat([feat_low, upsample_feat], 1)
-            inner_out, inner_attn = self.top_down_layers[len(self.in_channels) - 1 - idx](
+            inner_out = self.top_down_layers[len(self.in_channels) - 1 - idx](
                 top_down_layer_inputs, txt_feats)
-            inner_outs.insert(0, inner_out)
+            inner_outs.insert(0, inner_out.dense(channels_first=True))
             inner_attns.insert(0, inner_attn)
-            
+        
+        # make sparse tensor
+        sparse_inner_outs = []
+        for idx in range(len(self.in_channels)):
+            _, fc, fh, fw = inner_outs[idx].shape
+            sparse_inds = (inner_attns[idx][:,1] * fw + inner_attns[idx][:,2]).long()
+            sparse_inner_outs.append(spconv.SparseConvTensor(inner_outs[idx].view(fc, -1).transpose(0, 1)[sparse_inds].view(-1, fc), inner_attns[idx], (fh, fw), 1))
         # bottom-up path
-        outs = [inner_outs[0]]
+        outs = [sparse_inner_outs[0]]
         for idx in range(len(self.in_channels) - 1):
             feat_low = outs[-1]
-            feat_high = inner_outs[idx + 1]
+            feat_high = sparse_inner_outs[idx + 1]
             downsample_feat = self.downsample_layers[idx](feat_low) ## TODO: _make_spconv
-            out = self.bottom_up_layers[idx](torch.cat(
-                [downsample_feat, feat_high], 1), txt_feats)
+            out = self.bottom_up_layers[idx](self._concat(downsample_feat, feat_high), txt_feats)
             outs.append(out)
 
         # out_layers
@@ -218,8 +223,8 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPNSP):
             f2_idx = inverse_indices[f1.indices.size(0):]
             new_features[f1_idx, :f1.features.size(1)] = f1.features
             new_features[f2_idx, f1.features.size(1):] = f2.features
-            
-            return spconv.SparseConvTensor(new_features, concat_indices, f1.spatial_shape, f1.batch_size)
+            new_spconvtensor = spconv.SparseConvTensor(new_features, concat_indices, f1.spatial_shape, f1.batch_size)
+            return new_spconvtensor, new_spconvtensor.indices 
 
         else:
-            return torch.cat([f1, f2], 1)
+            return torch.cat([f1, f2], 1), None
