@@ -3,8 +3,7 @@ _base_ = (
 
 _base_.visualizer.vis_backends = [
     dict(type='LocalVisBackend'), #
-    dict(type='TensorboardVisBackend'),
-    dict(type='WandbVisBackend'),]
+    dict(type='TensorboardVisBackend'),]
 
 # hyper-parameters
 train_batch_size_per_gpu = 4
