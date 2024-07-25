@@ -1149,7 +1149,7 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
     def get_mask_gt(self, gt_bboxes, featmap_sizes, featmap_strides):
         '''
         intput:
-        gt_bboxes: [batch, num_pred, 5], 5 means (x, y, w, h, a), a \in [-pi/2, pi/2]，这里的x y 是左上角的点
+        gt_bboxes: [batch, num_pred, 5], 5 means (cx, cy, w, h, a), a \in [-pi/2, pi/2]
         featmap_sizes: Sequence[tensor[H, W]], len(seq)=num_levels
         featmap_strides: Sequence[tensor[int]], len(seq)=num_levels
         
@@ -1166,7 +1166,7 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         
         for level, (featmap_size, stride) in enumerate(zip(featmap_sizes, featmap_strides)):
             H, W = featmap_size
-            mask_level = torch.zeros((batch_size, num_pred, H, W), device=device)
+            mask_level = torch.zeros((batch_size, 1, H, W), device=device, dtype=torch.uint8)
             scale_factor = torch.tensor([1/stride, 1/stride, 1/stride, 1/stride, 1], device=device)
             scaled_bboxes = gt_bboxes * scale_factor[None, None, :]
             
@@ -1174,30 +1174,20 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
                 for n in range(num_pred):
                     x, y, w, h, angle = scaled_bboxes[b, n].cpu().numpy()
                     
-                    # 计算旋转后的左上角到中心点的向量
-                    cos_a, sin_a = np.cos(angle), np.sin(angle)
-                    vector_to_center = np.array([
-                        w/2 * cos_a - h/2 * sin_a,
-                        w/2 * sin_a + h/2 * cos_a
-                    ])
-                    
-                    # 计算中心点坐标
-                    center_x = x + vector_to_center[0]
-                    center_y = y + vector_to_center[1]
-                    
                     angle_deg = np.degrees(angle)
                     
-                    rect = ((center_x, center_y), (w, h), angle_deg)
+                    rect = ((x, y), (w, h), angle_deg)
                     box = cv2.boxPoints(rect)
                     
-                    box = np.int0(box)
+                    box = np.intp(box)  # 改用 np.intp
                     
                     mask = np.zeros((H, W), dtype=np.uint8)
                     cv2.fillPoly(mask, [box], 1)
                     
-                    mask_level[b, n] = torch.from_numpy(mask).to(device)
+                    mask_level[b, 0] = mask_level[b, 0] | torch.from_numpy(mask).to(device)
             mask_gt.append(mask_level)
-        
+
+        mask_gt = [mask.float() for mask in mask_gt]
         return mask_gt
 
     def cal_loss_mask(self, attn_preds, mask_gt):
