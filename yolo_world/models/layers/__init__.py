@@ -9,7 +9,7 @@ from .yolo_bricks import (
     RepConvMaxSigmoidCSPLayerWithTwoConv,
     RepMaxSigmoidCSPLayerWithTwoConv
     )
-from .yolo_bricks_sp import MaxSigmoidCSPLayerWithTwoConvSPInfer, MaxSigmoidAttnBlockSP
+from .yolo_bricks_sp import MaxSigmoidCSPLayerWithTwoConvSPInfer, KnowledgeAttnBlock, MaxSigmoidAttnBlockSPInfer
 
 __all__ = ['CSPLayerWithTwoConv',
            'MaxSigmoidAttnBlock',
@@ -17,5 +17,6 @@ __all__ = ['CSPLayerWithTwoConv',
            'RepConvMaxSigmoidCSPLayerWithTwoConv',
            'RepMaxSigmoidCSPLayerWithTwoConv',
            'ImagePoolingAttentionModule',
-           'MaxSigmoidAttnBlockSP',
-           'MaxSigmoidCSPLayerWithTwoConvSPInfer']
+           'KnowledgeAttnBlock',
+           'MaxSigmoidCSPLayerWithTwoConvSPInfer', 
+           'MaxSigmoidAttnBlockSPInfer']

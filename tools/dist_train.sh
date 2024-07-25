@@ -21,5 +21,4 @@ CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES CUDA_LAUNCH_BLOCKING=1 python -m torc
     --master_port=$PORT \
     $(dirname "$0")/train.py \
     $CONFIG \
-    --launcher pytorch ${@:4} \
-    --debug $DEBUG
+    --launcher pytorch ${@:3}

@@ -26,7 +26,7 @@ model = dict(
               num_heads=neck_num_heads,
               # reduce_embed_channels=neck_reduce_embed_channels,
               reduce_num_heads=neck_reduce_num_heads,
-              reduce_block_cfg=dict(type='MaxSigmoidAttnBlockSP')),
+              reduce_block_cfg=dict(type='KnowledgeAttnBlock')),
     bbox_head=dict(type='YOLOWorldRotatedHeadSP',
                    head_module=dict(featmap_strides=strides, 
                                     in_channels=in_channels),
