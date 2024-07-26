@@ -5,6 +5,7 @@ custom_imports = dict(
     imports=['yolo_world'],
     allow_failed_imports=False)
 
+
 # hyper-parameters
 num_classes = 15
 num_training_classes = 15
@@ -375,6 +376,8 @@ optim_wrapper = dict(
 #     metric='bbox')
 
 # visualizer = dict(type='mmrotate.RotLocalVisualizer')
-vis_backends = [dict(type='LocalVisBackend')]  # refer to https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html
+vis_backends = [
+    dict(type='LocalVisBackend'),
+    dict(type='TensorboardVisBackend'),]  # refer to https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html
 visualizer = dict(
     type='mmrotate.RotLocalVisualizer', vis_backends=vis_backends, name='visualizer')
