@@ -15,6 +15,7 @@ from torch.nn.modules.batchnorm import _BatchNorm
 
 from mmengine.dist import get_dist_info
 from mmengine.structures import InstanceData
+from mmdet.structures import SampleList
 from mmdet.structures.bbox import HorizontalBoxes, distance2bbox, get_box_type
 from mmdet.structures.bbox.transforms import bbox_cxcywh_to_xyxy, scale_boxes
 from mmdet.utils import ConfigType, OptConfigType, InstanceList, OptInstanceList, reduce_mean
@@ -960,7 +961,23 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
 
         return losses
     # def get_mask_gt(self, batch_gt_instances: Sequence[InstanceData],
-                    
+
+    def predict(self,
+                img_feats: Tuple[Tensor],
+                txt_feats: Tensor,
+                batch_data_samples: SampleList,
+                rescale: bool = False) -> InstanceList:
+        """Perform forward propagation of the detection head and predict
+        detection results on the features of the upstream network.
+        """
+        batch_img_metas = [
+            data_samples.metainfo for data_samples in batch_data_samples
+        ]
+        outs = self(img_feats[:self.num_levels], txt_feats)
+        predictions = self.predict_by_feat(*outs,
+                                           batch_img_metas=batch_img_metas,
+                                           rescale=rescale)
+        return predictions    
                     
     def loss_by_feat(
             self,
