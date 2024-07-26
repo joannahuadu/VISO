@@ -1,6 +1,5 @@
 _base_ = (
-    '../val_dota/'
-    'yolo_world_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
+    'yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
 
 # hyper-parameters
 train_batch_size_per_gpu = 4
