@@ -5,12 +5,13 @@ custom_imports = dict(
     imports=['yolo_world'],
     allow_failed_imports=False)
 
+
 # hyper-parameters
 num_classes = 15
 num_training_classes = 15
-max_epochs = 200  # Maximum training epochs
+max_epochs = 80  # Maximum training epochs
 close_mosaic_epochs = 10
-save_epoch_intervals = 5 
+save_epoch_intervals = 5
 text_channels = 512
 neck_embed_channels = [128, 256, _base_.last_stage_out_channels // 2]
 neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
@@ -334,7 +335,7 @@ default_hooks = dict(
         lr_factor=0.01,
         max_epochs=max_epochs),
     checkpoint=dict(
-        max_keep_ckpts=3,
+        max_keep_ckpts=-1,
         save_best='auto',
         interval=save_epoch_intervals))
 custom_hooks = [
@@ -352,7 +353,7 @@ custom_hooks = [
 ]
 train_cfg = dict(
     max_epochs=max_epochs,
-    val_interval=5,
+    val_interval= 1 ,
     dynamic_intervals=[((max_epochs - close_mosaic_epochs),
                         _base_.val_interval_stage2)])
 optim_wrapper = dict(
@@ -375,6 +376,8 @@ optim_wrapper = dict(
 #     metric='bbox')
 
 # visualizer = dict(type='mmrotate.RotLocalVisualizer')
-vis_backends = [dict(type='LocalVisBackend')]  # refer to https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html
+vis_backends = [
+    dict(type='LocalVisBackend'),
+    dict(type='TensorboardVisBackend'),]  # refer to https://mmengine.readthedocs.io/zh_CN/latest/advanced_tutorials/visualization.html
 visualizer = dict(
     type='mmrotate.RotLocalVisualizer', vis_backends=vis_backends, name='visualizer')
