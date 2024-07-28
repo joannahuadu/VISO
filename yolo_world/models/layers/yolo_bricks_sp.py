@@ -12,6 +12,7 @@ from mmyolo.registry import MODELS
 from mmyolo.models.layers import CSPLayerWithTwoConv
 from .yolo_bricks import MaxSigmoidCSPLayerWithTwoConv
 import spconv.pytorch as spconv
+from yolo_world.models.sputils import SPInfer
 
 @MODELS.register_module()
 class MaxSigmoidAttnBlockSPInfer(BaseModule):
@@ -32,7 +33,8 @@ class MaxSigmoidAttnBlockSPInfer(BaseModule):
                                              momentum=0.03,
                                              eps=0.001),
                  init_cfg: OptMultiConfig = None,
-                 use_einsum: bool = True) -> None:
+                 use_einsum: bool = True,
+                 is_sparse: int = 1) -> None:
         super().__init__(init_cfg=init_cfg)
         conv = DepthwiseSeparableConvModule if use_depthwise else ConvModule
 
@@ -65,6 +67,7 @@ class MaxSigmoidAttnBlockSPInfer(BaseModule):
                                  conv_cfg=conv_cfg,
                                  norm_cfg=norm_cfg,
                                  act_cfg=None)
+        self.is_sparse = is_sparse
 
     def forward(self, x: Tensor, guide: Tensor) -> Tensor:
         """Forward process."""
@@ -73,7 +76,8 @@ class MaxSigmoidAttnBlockSPInfer(BaseModule):
         guide = self.guide_fc(guide)
         guide = guide.reshape(B, -1, self.num_heads, self.head_channels)
         embed = self.embed_conv(x) if self.embed_conv is not None else x
-        embed = embed.dense(channels_first=True)
+        if self.is_sparse:
+            embed = embed.dense(channels_first=True)
         _, _, H, W = embed.shape
         embed = embed.reshape(B, self.num_heads, self.head_channels, H, W)
 
@@ -94,9 +98,13 @@ class MaxSigmoidAttnBlockSPInfer(BaseModule):
         attn_weight = attn_weight.sigmoid() * self.scale
 
         x = self.project_conv(x)
-        x = x.replace_feature(x.features.reshape(B, self.num_heads, -1, H, W))
-        x = x.replace_feature(x.features * attn_weight.unsqueeze(2))
-        x = x.replace_feature(x.features.reshape(B, -1, H, W))
+        if self.is_sparse:
+            attn_weight = attn_weight[:,:,x.indices[:,1],x.indices[:,2]].squeeze(0).permute(1, 0)
+            x = x.replace_feature((x.features.reshape(len(x.indices), self.num_heads, -1) * attn_weight.unsqueeze(2)).reshape(len(x.indices), -1))
+        else:
+            x = x.reshape(B, self.num_heads, -1, H, W)
+            x = x * attn_weight.unsqueeze(2)
+            x = x.reshape(B, -1, H, W)
         return x
 
 @MODELS.register_module()
@@ -170,7 +178,10 @@ class MaxSigmoidCSPLayerWithTwoConvSPInfer(MaxSigmoidCSPLayerWithTwoConv):
                 with_scale: bool = False,
                 conv_cfg: OptConfigType = None,
                 norm_cfg: ConfigType = dict(type='BN', momentum=0.03, eps=0.001),
+                act_cfg: ConfigType = dict(type='SiLU', inplace=True),
                 use_einsum: bool = True,
+                is_sparse: int = 1,
+                sp_type: str = "spconv",
                 *args, **kwargs) -> None:
             # bn_converted: bool = False
         super().__init__(guide_channels=guide_channels,
@@ -179,6 +190,7 @@ class MaxSigmoidCSPLayerWithTwoConvSPInfer(MaxSigmoidCSPLayerWithTwoConv):
                         with_scale=with_scale,
                         conv_cfg=conv_cfg,
                         norm_cfg=norm_cfg,
+                        act_cfg=act_cfg,
                         use_einsum=use_einsum,
                         *args, **kwargs)
         
@@ -190,91 +202,77 @@ class MaxSigmoidCSPLayerWithTwoConvSPInfer(MaxSigmoidCSPLayerWithTwoConv):
                                                     with_scale=with_scale,
                                                     conv_cfg=conv_cfg,
                                                     norm_cfg=norm_cfg,
-                                                    use_einsum=use_einsum)
+                                                    use_einsum=use_einsum,
+                                                    is_sparse=is_sparse)
         # self.sparse_module_list = [self.main_conv, self.blocks, self.attn_block, self.final_conv]
+        self.is_sparse = is_sparse
+        self.sp_type = sp_type
         self.sparse_module_name = ['main_conv', 'blocks', 'attn_block', 'final_conv']
         self.sparse_module_list = [getattr(self, name) for name in self.sparse_module_name]
         # self.bn_converted = bn_converted
            
     def forward(self, x: Tensor, guide: Tensor) -> Tensor:
         """Forward process."""
-        for name, m in zip(self.sparse_module_name, self.sparse_module_list):
-            self._replace_spinfer(name, m, self)
-        x_main = self.main_conv(x)
-        x_main_ = list(x_main.features.split((self.mid_channels, self.mid_channels), 1))
-        x_main_.extend(blocks(x_main.replace_feature(x_main_[-1])).features for blocks in self.blocks)
-        x_main_.append(self.attn_block(x_main.replace_feature(x_main_[-1]), guide).features)
-        return self.final_conv(x_main.replace_feature(torch.cat(x_main_, 1)))
-
-    def _replace_spinfer(self, name, module, parent) -> Tensor:
-        if isinstance(module, ConvModule):
-            weights, biases = self.get_params(module)
-            if hasattr(module, 'activate'):
-                act = module.activate
-            else:
-                act = None
-            setattr(parent, name, self._make_spconv(weights, biases, act)) # TODO: _make_spconv -> _make_conv
-            return
-        elif isinstance(module, nn.Conv2d):
-            weights, biases = self.get_params(module)
-            setattr(parent, name, self._make_spconv(weights, biases)) # TODO: _make_spconv -> _make_conv
-            return
+        if self.is_sparse:
+            sp_infer = SPInfer(self.sp_type)
+            for name, m in zip(self.sparse_module_name, self.sparse_module_list):
+                sp_infer._replace_spinfer(name, m, self)
+            x_main = self.main_conv(x)
+            x_main_ = list(x_main.features.split((self.mid_channels, self.mid_channels), 1))
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+            start_event.record()
+            x_main_.extend(blocks(x_main.replace_feature(x_main_[-1])).features for blocks in self.blocks)
+            end_event.record()
+            end_event.synchronize()
+            elapsed_time_ms = start_event.elapsed_time(end_event)
+            print(f"with sparse: {elapsed_time_ms} milliseconds")
+            x_main_.append(self.attn_block(x_main.replace_feature(x_main_[-1]), guide).features)
+            return self.final_conv(x_main.replace_feature(torch.cat(x_main_, 1)))
         else:
-            for name, child in module.named_children():
-                self._replace_spinfer(name, child, module)
+            x_main = self.main_conv(x)
+            x_main = list(x_main.split((self.mid_channels, self.mid_channels), 1))
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+            start_event.record()
+            x_main.extend(blocks(x_main[-1]) for blocks in self.blocks)
+            end_event.record()
+            end_event.synchronize()
+            elapsed_time_ms = start_event.elapsed_time(end_event)
+            print(f"without sparse: {elapsed_time_ms} milliseconds")
+            x_main.append(self.attn_block(x_main[-1], guide))
+            return self.final_conv(torch.cat(x_main, 1))   
     
-    def get_params(self, module) -> Tensor:
-        # if not self.bn_converted:
-        if isinstance(module, ConvModule):
-            self._bn_convert(module)
+@MODELS.register_module()
+class DownSampleConvSPInfer(BaseModule):
+    def __init__(self, 
+                in_channels: int,
+                out_channels: int,
+                init_cfg: OptMultiConfig = None,
+                norm_cfg: ConfigType = dict(type='BN',
+                    momentum=0.03,
+                    eps=0.001),
+                act_cfg: ConfigType = dict(type='SiLU', inplace=True),
+                is_sparse: int = 1,
+                sp_type: str = "spconv",
+                ) -> None:
+        super().__init__(init_cfg=init_cfg)
+        self.conv = ConvModule(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg)
+        self.is_sparse = is_sparse
+        self.sp_type = sp_type
+        self.sparse_module_name = ['conv']
+        self.sparse_module_list = [getattr(self, name) for name in self.sparse_module_name]
         
-        ws = module.weight.data
-        bs = module.bias.data
-        return ws, bs
-
-    def _bn_convert(self, module):
-        # assert not self.training
-        # if self.bn_converted:
-        #     return
-        running_mean = module.norm.running_mean.data
-        running_var = module.norm.running_var.data
-        gamma = module.norm.weight.data
-        beta = module.norm.bias.data
-        bn_scale = gamma * torch.rsqrt(running_var + 1e-10)
-        bn_bias  = beta - bn_scale * running_mean
-        setattr(module, 'weight', module.conv.weight.data * bn_scale.view(-1, 1, 1, 1))
-        setattr(module, 'bias',  torch.nn.Parameter(bn_bias))
-        # self.bn_converted = True
-        
-    def _make_spconv(self, weights, biases, act=None):
-        nets = []
-        in_channel  = weights.shape[1]
-        out_channel = weights.shape[0]
-        k_size      = weights.shape[2]
-        filter = spconv.SubMConv2d(in_channel, out_channel, k_size, 1, padding=k_size//2, indice_key="asd", algo=spconv.ConvAlgo.Native).to(device=weights.device)
-        filter.weight.data[:] = weights.permute(0,2,3,1).contiguous()[:] # transpose(1,2).transpose(0,1).transpose(2,3).transpose(1,2).transpose(2,3)
-        filter.bias.data   = biases
-        nets.append(filter)
-        if not act == None:
-            nets.append(act) ## TODO: Change into SiLU
-        return spconv.SparseSequential(*nets)
-    
-    def _make_conv(self, weights, biases, act=None):
-        nets = []
-        in_channel  = weights.shape[0]
-        out_channel = weights.shape[1]
-        k_size      = weights.shape[2]
-        filter = nn.Conv2d(in_channel, out_channel, k_size, 1, padding=k_size//2)
-        filter.weight.data = weights
-        filter.bias.data   = biases
-        nets.append(filter)
-        if not act is None:
-            nets.append(act)
-        return torch.nn.Sequential(*nets)
-    
-    def _run_spconvs(self, x, filters):
-        y = filters(x)
-        return y.dense(channels_first=False)
-
-    def _run_convs(self, x, filters):
-        return filters(x)
+    def forward(self, x: Tensor):
+        if self.is_sparse:
+            sp_infer = SPInfer(self.sp_type)
+            for name, m in zip(self.sparse_module_name, self.sparse_module_list):
+                sp_infer._replace_spinfer(name, m, self)
+        return self.conv(x)
