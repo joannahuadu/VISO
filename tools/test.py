@@ -64,7 +64,7 @@ def parse_args():
     parser.add_argument('--local-rank', type=int, default=0)
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
-        os.environ['LOCAL_RANK'] = str(args.local-rank)
+        os.environ['LOCAL_RANK'] = str(args.local_rank)
     return args
 
 
