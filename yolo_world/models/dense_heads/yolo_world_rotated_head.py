@@ -34,6 +34,7 @@ except ImportError:
     RotatedBoxes = None
     distance2obb = None
     MMROTATE_AVAILABLE = False
+from yolo_world.models.sputils import _make_sparse_tensor, SPInfer
 
 @MODELS.register_module()
 class YOLOWorldRotatedHeadModule(YOLOv8HeadModule):
@@ -1235,3 +1236,310 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         
         avg_loss = total_loss / num_levels
         return avg_loss
+
+@MODELS.register_module()
+class YOLOWorldRotatedHeadModuleSPInfer(YOLOWorldRotatedHeadModule):
+    """Sparse Head Module for YOLO-World (DOTA, rotated)
+    """
+
+    def __init__(self,
+                 sp_type: str = "vspconv",
+                 is_sparse_levels: List[int] = [1,1,0],
+                 *args,
+                 **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.is_sparse_levels = is_sparse_levels
+        self.sp_type = sp_type
+        self.sparse_module_name = ['cls_preds', 'reg_convs', 'reg_preds', 'ang_preds']
+        self.sparse_module_list = [getattr(self, name) for name in self.sparse_module_name]
+        
+    def forward(self, img_feats: Tuple[Tensor],
+                img_attns: Tuple[Tensor],
+                txt_feats: Tensor) -> Tuple[List]:
+        """Forward features from the upstream network."""
+        assert len(img_feats) == self.num_levels
+        txt_feats = [txt_feats for _ in range(self.num_levels)]
+        
+        sp_infer = SPInfer(self.sp_type)
+        for idx, is_sparse in enumerate(self.is_sparse_levels):
+            if is_sparse:
+                for m in self.sparse_module_list:
+                    sp_infer._replace_spinfer(str(idx), m[idx], m)
+
+        return multi_apply(self.forward_single, img_feats, img_attns, txt_feats, self.is_sparse_levels,
+                           self.cls_preds, self.reg_convs, self.reg_preds, self.ang_preds, self.cls_contrasts)
+
+    def forward_single(self, img_feat: Tensor, img_attn: Tensor, txt_feat: Tensor,
+                       is_sparse: bool,
+                       cls_pred: nn.ModuleList, reg_conv: nn.ModuleList, 
+                       reg_pred: nn.ModuleList, ang_pred: nn.ModuleList,
+                       cls_contrast: nn.ModuleList) -> Tuple:
+        """Forward feature of a single scale level."""
+        b, _, h, w = img_feat.shape
+        img_feat = _make_sparse_tensor(img_feat, img_attn, is_sparse)
+        if is_sparse:        
+            cls_embed = cls_pred(img_feat).dense(channels_first=True)
+            cls_logit = cls_contrast(cls_embed, txt_feat)
+            bbox_dist_preds = reg_pred(reg_conv(img_feat)).dense(channels_first=True)
+            angle_dist_preds = ang_pred(reg_conv(img_feat)).dense(channels_first=True)
+        else:
+            cls_embed = cls_pred(img_feat)
+            cls_logit = cls_contrast(cls_embed, txt_feat)
+            bbox_dist_preds = reg_pred(reg_conv(img_feat))
+            angle_dist_preds = ang_pred(reg_conv(img_feat))
+        if self.reg_max > 1:
+            bbox_dist_preds = bbox_dist_preds.reshape(
+                [-1, 4, self.reg_max, h * w]).permute(0, 3, 1, 2)
+            angle_dist_preds = angle_dist_preds.reshape(
+                [-1, 1, self.reg_max, h * w]).permute(0, 3, 1, 2)
+            # TODO: The get_flops script cannot handle the situation of
+            #  matmul, and needs to be fixed later
+            # bbox_preds = bbox_dist_preds.softmax(3).matmul(self.proj)
+            bbox_preds = bbox_dist_preds.softmax(3).matmul(
+                self.proj.view([-1, 1])).squeeze(-1)
+            bbox_preds = bbox_preds.transpose(1, 2).reshape(b, -1, h, w)
+            ang_preds = angle_dist_preds.softmax(3).matmul(
+                self.proj.view([-1, 1])).squeeze(-1)
+            ang_preds = ang_preds.transpose(1, 2).reshape(b, -1, h, w)
+        else:
+            bbox_preds = bbox_dist_preds
+            ang_preds = angle_dist_preds
+        if self.training:
+            return cls_logit, bbox_preds, ang_preds, bbox_dist_preds, angle_dist_preds
+        else:
+            return cls_logit, bbox_preds, ang_preds
+
+@MODELS.register_module()
+class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
+    """YOLO-World Head
+    """
+    def __init__(self, 
+                *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.num_levels = self.head_module.num_levels
+
+    def predict(self,
+                img_feats: Tuple[Tensor],
+                txt_feats: Tensor,
+                batch_data_samples: SampleList,
+                rescale: bool = False) -> InstanceList:
+        """Perform forward propagation of the detection head and predict
+        detection results on the features of the upstream network.
+        """
+        batch_img_metas = [
+            data_samples.metainfo for data_samples in batch_data_samples
+        ]
+        outs = self(img_feats[:self.num_levels], img_feats[self.num_levels:], txt_feats)
+        predictions = self.predict_by_feat(*outs,
+                                           batch_img_metas=batch_img_metas,
+                                           rescale=rescale)
+        return predictions
+    
+    def forward(self, img_feats: Tuple[Tensor],
+                img_attns: Tuple[Tensor],
+                txt_feats: Tensor) -> Tuple[List]:
+        """Forward features from the upstream network."""
+        return self.head_module(img_feats, img_attns, txt_feats)
+    
+    def predict_by_feat(self,
+                        cls_scores: List[Tensor],
+                        bbox_preds: List[Tensor],
+                        angle_preds: List[Tensor],
+                        objectnesses: Optional[List[Tensor]] = None,
+                        batch_img_metas: Optional[List[dict]] = None,
+                        cfg: Optional[ConfigDict] = None,
+                        rescale: bool = True,
+                        with_nms: bool = True) -> List[InstanceData]:
+        """Transform a batch of output features extracted by the head into
+        bbox results.
+        Args:
+            cls_scores (list[Tensor]): Classification scores for all
+                scale levels, each is a 4D-tensor, has shape
+                (batch_size, num_priors * num_classes, H, W).
+            bbox_preds (list[Tensor]): Box energies / deltas for all
+                scale levels, each is a 4D-tensor, has shape
+                (batch_size, num_priors * 4, H, W).
+            angle_preds (list[Tensor]): Box angle for each scale level
+                with shape (N, num_points * angle_dim, H, W)
+            objectnesses (list[Tensor], Optional): Score factor for
+                all scale level, each is a 4D-tensor, has shape
+                (batch_size, 1, H, W).
+            batch_img_metas (list[dict], Optional): Batch image meta info.
+                Defaults to None.
+            cfg (ConfigDict, optional): Test / postprocessing
+                configuration, if None, test_cfg would be used.
+                Defaults to None.
+            rescale (bool): If True, return boxes in original image space.
+                Defaults to False.
+            with_nms (bool): If True, do nms before return boxes.
+                Defaults to True.
+
+        Returns:
+            list[:obj:`InstanceData`]: Object detection results of each image
+            after the post process. Each item usually contains following keys.
+
+            - scores (Tensor): Classification scores, has a shape
+              (num_instance, )
+            - labels (Tensor): Labels of bboxes, has a shape
+              (num_instances, ).
+            - bboxes (Tensor): Has a shape (num_instances, 4),
+              the last dimension 4 arrange as (x1, y1, x2, y2).
+        """
+        assert len(cls_scores) == len(bbox_preds)
+        if objectnesses is None:
+            with_objectnesses = False
+        else:
+            with_objectnesses = True
+            assert len(cls_scores) == len(objectnesses)
+
+        cfg = self.test_cfg if cfg is None else cfg
+        cfg = copy.deepcopy(cfg)
+
+        multi_label = cfg.multi_label
+        multi_label &= self.num_classes > 1
+        cfg.multi_label = multi_label
+        
+        # Whether to decode rbox with angle.
+        # different setting lead to different final results.
+        # Defaults to True.
+        decode_with_angle = cfg.get('decode_with_angle', True)
+        
+        num_imgs = len(batch_img_metas)
+        featmap_sizes = [cls_score.shape[2:] for cls_score in cls_scores]
+
+        # If the shape does not change, use the previous mlvl_priors
+        if featmap_sizes != self.featmap_sizes:
+            self.mlvl_priors = self.prior_generator.grid_priors(
+                featmap_sizes,
+                dtype=cls_scores[0].dtype,
+                device=cls_scores[0].device)
+            self.featmap_sizes = featmap_sizes
+        flatten_priors = torch.cat(self.mlvl_priors)
+
+        mlvl_strides = [
+            flatten_priors.new_full(
+                (featmap_size.numel() * self.num_base_priors, ), stride) for
+            featmap_size, stride in zip(featmap_sizes, self.featmap_strides)
+        ]
+        flatten_stride = torch.cat(mlvl_strides)
+
+        # flatten cls_scores, bbox_preds and objectness
+        flatten_cls_scores = [
+            cls_score.permute(0, 2, 3, 1).reshape(num_imgs, -1,
+                                                  self.num_classes)
+            for cls_score in cls_scores
+        ]
+        flatten_bbox_preds = [
+            bbox_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1, 4)
+            for bbox_pred in bbox_preds
+        ]
+        flatten_angle_preds = [
+            angle_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1,
+                                                   self.angle_out_dim)
+            for angle_pred in angle_preds
+        ]
+        
+        flatten_cls_scores = torch.cat(flatten_cls_scores, dim=1).sigmoid()
+        flatten_bbox_preds = torch.cat(flatten_bbox_preds, dim=1)
+        flatten_angle_preds = torch.cat(flatten_angle_preds, dim=1)
+        flatten_angle_preds = self.angle_coder.decode(
+            flatten_angle_preds, keepdim=True)
+        
+        if decode_with_angle:
+            flatten_rbbox_preds = torch.cat(
+                [flatten_bbox_preds, flatten_angle_preds], dim=-1)
+            flatten_decoded_bboxes = self.bbox_coder.decode(
+                flatten_priors[None], flatten_rbbox_preds, flatten_stride)
+        else:
+            flatten_decoded_hbboxes = self.bbox_coder.decode(
+                flatten_priors[None], flatten_bbox_preds, flatten_stride)
+            flatten_decoded_hbboxes = HorizontalBoxes.xyxy_to_cxcywh(
+                flatten_decoded_hbboxes)
+            flatten_decoded_bboxes = torch.cat(
+                [flatten_decoded_hbboxes, flatten_angle_preds], dim=-1)
+            
+        if with_objectnesses:
+            flatten_objectness = [
+                objectness.permute(0, 2, 3, 1).reshape(num_imgs, -1)
+                for objectness in objectnesses
+            ]
+            flatten_objectness = torch.cat(flatten_objectness, dim=1).sigmoid()
+        else:
+            flatten_objectness = [None for _ in range(num_imgs)]
+        # 8400
+        # print(flatten_cls_scores.shape)
+        results_list = []
+        for (bboxes, scores, objectness,
+             img_meta) in zip(flatten_decoded_bboxes, flatten_cls_scores,
+                              flatten_objectness, batch_img_metas):
+            # ori_shape = img_meta['ori_shape']
+            scale_factor = img_meta['scale_factor']
+            if 'pad_param' in img_meta:
+                pad_param = img_meta['pad_param']
+            else:
+                pad_param = None
+
+            score_thr = cfg.get('score_thr', -1)
+            # yolox_style does not require the following operations
+            if objectness is not None and score_thr > 0 and not cfg.get(
+                    'yolox_style', False):
+                conf_inds = objectness > score_thr
+                bboxes = bboxes[conf_inds, :]
+                scores = scores[conf_inds, :]
+                objectness = objectness[conf_inds]
+
+            if objectness is not None:
+                # conf = obj_conf * cls_conf
+                scores *= objectness[:, None]
+
+            if scores.shape[0] == 0:
+                empty_results = InstanceData()
+                empty_results.bboxes = RotatedBoxes(bboxes)
+                empty_results.scores = scores[:, 0]
+                empty_results.labels = scores[:, 0].int()
+                results_list.append(empty_results)
+                continue
+
+            nms_pre = cfg.get('nms_pre', 100000)
+            if cfg.multi_label is False:
+                scores, labels = scores.max(1, keepdim=True)
+                scores, _, keep_idxs, results = filter_scores_and_topk(
+                    scores,
+                    score_thr,
+                    nms_pre,
+                    results=dict(labels=labels[:, 0]))
+                labels = results['labels']
+            else:
+                scores, labels, keep_idxs, _ = filter_scores_and_topk(
+                    scores, score_thr, nms_pre)
+
+            results = InstanceData(scores=scores,
+                                   labels=labels,
+                                   bboxes=RotatedBoxes(bboxes[keep_idxs]))
+
+            if rescale:
+                if pad_param is not None:
+                    # results.bboxes -= results.bboxes.new_tensor([
+                    #     pad_param[2], pad_param[0], pad_param[2], pad_param[0]
+                    # ])
+                    results.bboxes.translate_([-pad_param[2], -pad_param[0]])
+                
+                # results.bboxes /= results.bboxes.new_tensor(
+                    # scale_factor).repeat((1, 2))
+                scale_factor = [1 / s for s in img_meta['scale_factor']]
+                results.bboxes = scale_boxes(results.bboxes, scale_factor)
+
+            if cfg.get('yolox_style', False):
+                # do not need max_per_img
+                cfg.max_per_img = len(results)
+
+            results = self._bbox_post_process(results=results,
+                                              cfg=cfg,
+                                              rescale=False,
+                                              with_nms=with_nms,
+                                              img_meta=img_meta)
+            # results.bboxes[:, 0::2].clamp_(0, ori_shape[1])
+            # results.bboxes[:, 1::2].clamp_(0, ori_shape[0])
+
+            results_list.append(results)
+        return results_list

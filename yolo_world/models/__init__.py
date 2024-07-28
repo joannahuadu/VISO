@@ -7,3 +7,4 @@ from .data_preprocessors import *  # noqa
 from .dense_heads import *  # noqa
 from .necks import *  # noqa
 from .assigner import *  # noqa
+from .sputils import *
