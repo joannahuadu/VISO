@@ -1276,7 +1276,7 @@ class YOLOWorldRotatedHeadModuleSPInfer(YOLOWorldRotatedHeadModule):
                        cls_contrast: nn.ModuleList) -> Tuple:
         """Forward feature of a single scale level."""
         b, _, h, w = img_feat.shape
-        img_feat = _make_sparse_tensor(img_feat, img_attn, is_sparse)
+        img_feat = _make_sparse_tensor(img_feat, img_attn, is_sparse, ishead=True)
         if is_sparse:        
             cls_embed = cls_pred(img_feat).dense(channels_first=True)
             cls_logit = cls_contrast(cls_embed, txt_feat)

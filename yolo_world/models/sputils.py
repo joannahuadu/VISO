@@ -6,6 +6,32 @@ from torch import Tensor
 from mmcv.cnn import ConvModule
 import spconv.pytorch as spconv
 
+class IndiceTensor(torch.Tensor):
+    def __new__(cls, features, indices):
+        """
+        Args:
+            features: [num_points, num_features] feature tensor
+            indices: [num_points, ndim + 1] indice tensor. batch index saved in indices[:, 0]
+        """
+        # Ensure indices is a 2D tensor with int32 type
+        assert indices.ndim == 2, "indices must be a 2D tensor"
+        assert indices.dtype == torch.int32, "indices must be of type int32"
+
+        # Create a new tensor instance with the features
+        instance = torch.Tensor._make_subclass(cls, features, require_grad=features.requires_grad)
+        # Add the indices attribute
+        instance.indices = indices
+
+        return instance
+
+    @property
+    def is_quantized(self):
+        return self.dtype == torch.qint8
+
+    @property
+    def features(self):
+        return self
+
 class SPInfer:
     def __init__(self, sp_type = "spconv"):
         self.sp_type = sp_type
@@ -124,12 +150,48 @@ def _concat(f1, f2):
         return new_spconvtensor, new_spconvtensor.indices 
 
     else:
-        return torch.cat([f1, f2], 1), None
+        concat_indices, _ = torch.unique(torch.cat([f1.indices, f2.indices], 0), sorted=True, return_inverse=True, dim=0)
+        return torch.cat([f1, f2], 1), concat_indices
 
-def _make_sparse_tensor(feature_value, indices, is_sparse=True, project=False):
+def _make_sparse_tensor(feature_value, indices, is_sparse=True, project=None, ishead=False):
     if not is_sparse:
-        return feature_value
+        if project==None:
+            if not ishead:
+                return IndiceTensor(feature_value, indices)
+            else:
+                return torch.Tensor(feature_value)
+        elif project=='up':
+            y = indices[:, 1]
+            x = indices[:, 2]
+            sparse_y, sparse_x = [], []
+            for i in range(2):
+                for j in range(2):
+                    sparse_y.append(y * 2 + i)
+                    sparse_x.append(x * 2 + j)
+
+            sparse_y = torch.cat(sparse_y, dim=0)
+            sparse_x = torch.cat(sparse_x, dim=0)
+        else:
+            y = indices[:, 1]
+            x = indices[:, 2]
+            sparse_y, sparse_x = [], []
+            for i in range(2):
+                for j in range(2):
+                    sparse_y.append(y // 2 + i)
+                    sparse_x.append(x // 2 + j)
+
+            sparse_y = torch.cat(sparse_y, dim=0)
+            sparse_x = torch.cat(sparse_x, dim=0)
+            sparse_yx = torch.stack((sparse_y, sparse_x), dim=0).t()
+            sparse_yx = torch.unique(sparse_yx, sorted=False, dim=0)
+            sparse_y = sparse_yx[:, 0]
+            sparse_x = sparse_yx[:, 1]
+            
+        sparse_indices  = torch.stack((torch.zeros_like(sparse_y), sparse_y, sparse_x), dim=-1)
+        return IndiceTensor(feature_value, sparse_indices)
     else:
+        if isinstance(feature_value, spconv.SparseConvTensor):
+            return feature_value
         _, fc, fh, fw = feature_value.shape
         if not project:
             sparse_y = indices[:, 1]
