@@ -4,7 +4,8 @@ _base_ = (
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
-is_sparse_levels = [1,0,0]
+is_sparse_levels = [1,1,1]
+
 # model settings
 model = dict(
     neck=dict(type='YOLOWorldPAFPNSPInfer',
