@@ -242,7 +242,31 @@ class MaxSigmoidCSPLayerWithTwoConvSPInfer(MaxSigmoidCSPLayerWithTwoConv):
             # print(f"without sparse: {elapsed_time_ms} milliseconds")
             x_main.append(self.attn_block(x_main[-1], guide))
             return self.final_conv(torch.cat(x_main, 1))   
-    
+
+@MODELS.register_module()
+class DownSampleConvSP(BaseModule):
+    def __init__(self, 
+                in_channels: int,
+                out_channels: int,
+                init_cfg: OptMultiConfig = None,
+                norm_cfg: ConfigType = dict(type='BN',
+                    momentum=0.03,
+                    eps=0.001),
+                act_cfg: ConfigType = dict(type='SiLU', inplace=True),
+                ) -> None:
+        super().__init__(init_cfg=init_cfg)
+        self.conv = ConvModule(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg)
+        
+    def forward(self, x: Tensor):
+        return self.conv(x)
+
 @MODELS.register_module()
 class DownSampleConvSPInfer(BaseModule):
     def __init__(self, 

@@ -21,13 +21,32 @@ class YOLOWorldPAFPNSP(YOLOWorldPAFPN):
                 #  reduce_embed_channels: List[int],
                  reduce_num_heads: List[int],
                  reduce_block_cfg: ConfigType = dict(type='KnowledgeAttnBlock'),
+                 downsample_block_cfg: ConfigType = dict(type='DownSampleConvSP'),
                  *args, **kwargs) -> None:
         # self.reduce_embed_channels = reduce_embed_channels
+        self.downsample_block_cfg = downsample_block_cfg
         self.reduce_num_heads = reduce_num_heads
         self.reduce_block_cfg = reduce_block_cfg
         super().__init__(*args, **kwargs)
 
+    def build_downsample_layer(self, idx: int) -> nn.Module:
+        """build downsample layer.
 
+        Args:
+            idx (int): layer idx.
+
+        Returns:
+            nn.Module: The downsample layer.
+        """
+        downsample_block_cfg = copy.deepcopy(self.downsample_block_cfg)
+        downsample_block_cfg.update(in_channels=make_divisible(
+                                    self.in_channels[idx], self.widen_factor),
+                                    out_channels=make_divisible(
+                                    self.in_channels[idx], self.widen_factor),
+                                    norm_cfg=self.norm_cfg,
+                                    act_cfg=self.act_cfg)
+        return MODELS.build(downsample_block_cfg)
+        
 
     def build_reduce_layer(self, idx: int) -> nn.Module:
         """build reduce layer.
