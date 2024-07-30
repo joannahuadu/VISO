@@ -200,7 +200,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPNSP):
                                                          idx](feat_high), 
                                     inner_attn, 
                                     is_sparse=self.is_sparse_levels[idx - 1], 
-                                    project=True)
+                                    project='up')
             if self.upsample_feats_cat_first:
                 top_down_layer_inputs, inner_attn = _concat(upsample_feat, feat_low)
                 # top_down_layer_inputs = torch.cat([upsample_feat, feat_low], 1)
@@ -222,7 +222,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPNSP):
             out_attn = out_attns[-1]
             feat_low = _make_sparse_tensor(outs[-1], out_attn, self.is_sparse_levels[idx + 1])
             feat_high = _make_sparse_tensor(inner_outs[idx + 1], inner_attns[idx + 1], self.is_sparse_levels[idx + 1])
-            downsample_feat = self.downsample_layers[idx](feat_low)
+            downsample_feat = _make_sparse_tensor(self.downsample_layers[idx](feat_low), out_attn, self.is_sparse_levels[idx + 1], project='down')
             bottom_up_layer_inputs, out_attn = _concat(downsample_feat, feat_high)
             out = self.bottom_up_layers[idx](bottom_up_layer_inputs, txt_feats)
             if self.is_sparse_levels[idx + 1]:
