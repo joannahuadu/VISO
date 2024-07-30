@@ -16,44 +16,11 @@ model = dict(
               in_channels=in_channels,
               out_channels=out_channels,
               embed_channels=neck_embed_channels,
-              num_heads=neck_num_heads),
+              num_heads=neck_num_heads,
+              downsample_block_cfg=dict(type='DownSampleConvSP')),
     bbox_head=dict(
                   head_module=dict(
                                   featmap_strides=strides,
                                   in_channels=in_channels),
                   prior_generator=dict(strides=strides)
                 ))
-    
-    #                 prior_generator=dict(
-    #                     type='mmdet.MlvlPointGenerator', offset=0, strides=strides),
-    #                 bbox_coder=dict(
-    #                     type='DistanceAnglePointCoder', angle_version=angle_version),
-    #                 loss_cls=dict(
-    #                     _delete_=True,
-    #                     type='mmdet.QualityFocalLoss',
-    #                     use_sigmoid=True,
-    #                     beta=qfl_beta,
-    #                     loss_weight=loss_cls_weight),
-    #                 loss_bbox=dict(
-    #                     _delete_=True,
-    #                     type='mmrotate.RotatedIoULoss',
-    #                     mode='linear',
-    #                     loss_weight=loss_bbox_weight),
-    #                 angle_version=angle_version,
-    #                 angle_coder=dict(type='mmrotate.PseudoAngleCoder'),
-    #                 use_hbbox_loss=False,
-    #                 loss_angle=None),
-    # train_cfg=dict(
-    #     assigner=dict(
-    #         _delete_=True,
-    #         type='BatchDynamicSoftLabelAssigner',
-    #         num_classes=num_classes,
-    #         topk=dsl_topk,
-    #         iou_calculator=dict(type='mmrotate.RBboxOverlaps2D'),
-    #         # RBboxOverlaps2D doesn't support batch input, use loop instead.
-    #         batch_iou=False),
-    #     allowed_border=-1,
-    #     pos_weight=-1,
-    #     debug=False
-    #     ),
-    # test_cfg=model_test_cfg,)
