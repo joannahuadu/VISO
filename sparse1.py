@@ -2,14 +2,14 @@ import spconv.pytorch as spconv
 import torch
 import torch.nn as nn
 from mmyolo.models.layers import DarknetBottleneck
-device='cpu'
+device='cuda:0'
 from yolo_world.models.sputils import SPInfer
 
 # x_d = torch.zeros((1, 128, 256, 256))
 channel = 256
 x_d = torch.zeros((1, channel, 32, 32))
 # torch.Size([1, 256, 200, 304])
-x_d[0,0,0:40,0:40] += 1.
+x_d[0,0,0:10,0:10] += 1.
 x_d = x_d.to(device)
 x = spconv.SparseConvTensor.from_dense(x_d.permute(0,2,3,1))
 
