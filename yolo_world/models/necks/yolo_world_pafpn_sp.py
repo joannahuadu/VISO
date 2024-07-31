@@ -24,9 +24,9 @@ class YOLOWorldPAFPNSP(YOLOWorldPAFPN):
                  downsample_block_cfg: ConfigType = dict(type='DownSampleConvSP'),
                  *args, **kwargs) -> None:
         # self.reduce_embed_channels = reduce_embed_channels
-        self.downsample_block_cfg = downsample_block_cfg
         self.reduce_num_heads = reduce_num_heads
         self.reduce_block_cfg = reduce_block_cfg
+        self.downsample_block_cfg = downsample_block_cfg
         super().__init__(*args, **kwargs)
 
     def build_downsample_layer(self, idx: int) -> nn.Module:
@@ -121,19 +121,23 @@ class YOLOWorldPAFPNSP(YOLOWorldPAFPN):
         return tuple(results)
 
 @MODELS.register_module()
-class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPNSP):
+class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
     """Path Aggregation Network with sparse convolution used in YOLO World
     Following YOLOv8 PAFPN, including text to image fusion, including text-guided masked image features., including forward with sparse convolution
     """
     def __init__(self,
+                 reduce_num_heads: List[int],
+                 reduce_block_cfg: ConfigType = dict(type='KnowledgeAttnBlock'),
                  sp_type: str = "vspconv",
                  is_sparse_levels: List[int] = [1,1,0],
                  score_th: float = 0.501,
                  downsample_block_cfg: ConfigType = dict(type='DownSampleConvSPInfer'),
                  *args, **kwargs) -> None:
-        self.downsample_block_cfg = downsample_block_cfg
-        self.is_sparse_levels = is_sparse_levels
+        self.reduce_num_heads = reduce_num_heads
+        self.reduce_block_cfg = reduce_block_cfg
         self.sp_type = sp_type
+        self.is_sparse_levels = is_sparse_levels
+        self.downsample_block_cfg = downsample_block_cfg
         super().__init__(*args, **kwargs)
         assert len(self.is_sparse_levels) == len(self.in_channels)
         self.score_th = score_th
@@ -180,7 +184,33 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPNSP):
                                     act_cfg=self.act_cfg,
                                     is_sparse = self.is_sparse_levels[idx+1])
         return MODELS.build(downsample_block_cfg)
+    
+    def build_reduce_layer(self, idx: int) -> nn.Module:
+        """build reduce layer.
+        Generate text-guided masked image features.
         
+        Args:
+            idx (int): layer idx.
+
+        Returns:
+            nn.Module: The reduce layer.
+        
+        """
+        reduce_block_cfg = copy.deepcopy(self.reduce_block_cfg)
+        reduce_block_cfg.update(in_channels=make_divisible(
+                                self.in_channels[idx], self.widen_factor),
+                                # out_channels=make_divisible(
+                                # self.in_channels[idx], self.widen_factor),
+                                guide_channels=self.guide_channels,
+                                # embed_channels=make_round(self.reduce_embed_channels[idx],
+                                #                         self.widen_factor),
+                                embed_channels=make_divisible(
+                                self.in_channels[idx], self.widen_factor),
+                                num_heads=make_round(self.reduce_num_heads[idx],
+                                                    self.widen_factor),
+                                )
+        return MODELS.build(reduce_block_cfg)
+
     def _sparse_indices(self, feature_value, attn_preds):
         N, _, qh, qw = attn_preds.shape
         assert N==1
