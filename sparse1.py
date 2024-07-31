@@ -6,10 +6,10 @@ device='cuda:0'
 from yolo_world.models.sputils import SPInfer
 
 # x_d = torch.zeros((1, 128, 256, 256))
-channel = 256
-x_d = torch.zeros((1, channel, 32, 32))
+channel = 64
+x_d = torch.zeros((1, channel, 512, 512))
 # torch.Size([1, 256, 200, 304])
-x_d[0,0,0:10,0:10] += 1.
+x_d[0,0,0:512,0:512] += 1.
 x_d = x_d.to(device)
 x = spconv.SparseConvTensor.from_dense(x_d.permute(0,2,3,1))
 
@@ -21,7 +21,7 @@ conv_norm = nn.Conv2d(channel, channel, kernel_size=3, stride=1, padding=1, bias
 bn_norm = nn.BatchNorm2d(channel, momentum=0.1).to(device)
 conv_bn_relu_norm = nn.Sequential(conv_norm, bn_norm, nn.ReLU(inplace=True)).to(device)
 
-for i in range(100):
+for i in range(1000):
      print("round:", i)
      start_event = torch.cuda.Event(enable_timing=True)
      end_event = torch.cuda.Event(enable_timing=True)
