@@ -44,14 +44,14 @@ def parse_args():
     """Parse arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'split_config', type=str, help='The split config for image slicing.')
+        '--split_config', type=str, help='The split config for image slicing.')
     parser.add_argument(
-        'data_root', type=str, help='Root dir of DOTA dataset.')
+        '--data_root', type=str, help='Root dir of DOTA dataset.')
     parser.add_argument(
-        'out_dir', type=str, help='Output dir for split result.')
+        '--out_dir', type=str, help='Output dir for split result.')
     parser.add_argument(
-        '--ann-subdir',
-        default='labelTxt-v1.0',
+        '--ann_subdir',
+        default='labelTxt',
         type=str,
         help='output directory')
     parser.add_argument(
@@ -65,7 +65,7 @@ def parse_args():
     parser.add_argument(
         '--nproc', default=8, type=int, help='Number of processes.')
     parser.add_argument(
-        '--save-ext',
+        '--save_ext',
         default=None,
         type=str,
         help='Extension of the saved image.')
@@ -132,7 +132,7 @@ def load_original_annotations(data_root: str,
     if phase == 'test':
         ann_dir = None
     else:
-        ann_dir = osp.join(data_root, phase, ann_subdir, 'labelTxt')
+        ann_dir = osp.join(data_root, phase, ann_subdir)
         assert osp.isdir(ann_dir), f'The {ann_dir} is not an existing dir!'
 
     _load_func = partial(_load_dota_single, img_dir=img_dir, ann_dir=ann_dir)

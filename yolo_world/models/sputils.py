@@ -200,8 +200,8 @@ def _make_sparse_tensor(feature_value, indices, is_sparse=True, project=None, is
             y = indices[:, 1]
             x = indices[:, 2]
             sparse_y, sparse_x = [], []
-            for i in range(2):
-                for j in range(2):
+            for i in range(1):
+                for j in range(1):
                     sparse_y.append(y * 2 + i)
                     sparse_x.append(x * 2 + j)
 

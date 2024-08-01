@@ -1,5 +1,5 @@
 _base_ = (
-    'yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota_p2_2048.py')
+    'yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_p2_2048.py')
 
 _base_.visualizer.vis_backends = [
     dict(type='LocalVisBackend'), #
@@ -8,7 +8,6 @@ _base_.visualizer.vis_backends = [
 
 dota_train_dataset = dict(
     dataset=dict(
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota_2048/',
         ann_file='train/annfiles/',
         data_prefix=dict(img_path='train/images/'))
 )
@@ -16,7 +15,6 @@ train_dataloader = dict(dataset=dota_train_dataset)
 
 dota_val_dataset = dict(
     dataset=dict(
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota_2048/',
         ann_file='val/annfiles/',
         data_prefix=dict(img_path='val/images/'),
         batch_shapes_cfg=None))

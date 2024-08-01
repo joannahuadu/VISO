@@ -13,7 +13,7 @@ from mmyolo.models.layers import CSPLayerWithTwoConv
 from .yolo_bricks import MaxSigmoidCSPLayerWithTwoConv
 import spconv.pytorch as spconv
 from yolo_world.models.sputils import SPInfer
-
+# import time
 @MODELS.register_module()
 class MaxSigmoidAttnBlockSPInfer(BaseModule):
     """Max Sigmoid attention block."""
@@ -222,11 +222,13 @@ class MaxSigmoidCSPLayerWithTwoConvSPInfer(MaxSigmoidCSPLayerWithTwoConv):
             # start_event = torch.cuda.Event(enable_timing=True)
             # end_event = torch.cuda.Event(enable_timing=True)
             # start_event.record()
+            # start_event = time.time()
             x_main_.extend(blocks(x_main.replace_feature(x_main_[-1])).features for blocks in self.blocks)
             # end_event.record()
             # end_event.synchronize()
             # elapsed_time_ms = start_event.elapsed_time(end_event)
             # print(f"with sparse: {elapsed_time_ms} milliseconds")
+            # print(f"with sparse: {time.time()-start_event} milliseconds")
             x_main_.append(self.attn_block(x_main.replace_feature(x_main_[-1]), guide).features)
             return self.final_conv(x_main.replace_feature(torch.cat(x_main_, 1)))
         else:
@@ -235,11 +237,13 @@ class MaxSigmoidCSPLayerWithTwoConvSPInfer(MaxSigmoidCSPLayerWithTwoConv):
             # start_event = torch.cuda.Event(enable_timing=True)
             # end_event = torch.cuda.Event(enable_timing=True)
             # start_event.record()
+            # start_event = time.time()
             x_main.extend(blocks(x_main[-1]) for blocks in self.blocks)
             # end_event.record()
             # end_event.synchronize()
             # elapsed_time_ms = start_event.elapsed_time(end_event)
             # print(f"without sparse: {elapsed_time_ms} milliseconds")
+            # print(f"without sparse: {time.time()-start_event} milliseconds")
             x_main.append(self.attn_block(x_main[-1], guide))
             return self.final_conv(torch.cat(x_main, 1))   
 

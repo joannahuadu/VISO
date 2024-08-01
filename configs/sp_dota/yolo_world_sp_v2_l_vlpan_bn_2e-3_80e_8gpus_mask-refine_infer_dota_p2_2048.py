@@ -10,7 +10,7 @@ neck_embed_channels = [64, 128, 256, _base_.last_stage_out_channels // 2]
 neck_num_heads = [4, 4, 8, _base_.last_stage_out_channels // 2 // 32]
 # neck_reduce_embed_channels = [128, 256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1,1]
-is_sparse_levels = [0,0,0,0]
+is_sparse_levels = [1,1,0,0]
 img_scale = (2048, 2048)
 
 # model settings
@@ -24,7 +24,7 @@ model = dict(
               num_heads=neck_num_heads,
               sp_type="vspconv",
               is_sparse_levels = is_sparse_levels,
-              score_th=0.509,
+              score_th=0.505,
             #   reduce_embed_channels=neck_reduce_embed_channels,
               downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),
               reduce_num_heads=neck_reduce_num_heads,
