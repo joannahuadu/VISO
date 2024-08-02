@@ -181,7 +181,7 @@ class MaxSigmoidCSPLayerWithTwoConvSPInfer(MaxSigmoidCSPLayerWithTwoConv):
                 act_cfg: ConfigType = dict(type='SiLU', inplace=True),
                 use_einsum: bool = True,
                 is_sparse: int = 1,
-                sp_type: str = "spconv",
+                sp_type: str = "vspconv",
                 *args, **kwargs) -> None:
             # bn_converted: bool = False
         super().__init__(guide_channels=guide_channels,
@@ -214,9 +214,9 @@ class MaxSigmoidCSPLayerWithTwoConvSPInfer(MaxSigmoidCSPLayerWithTwoConv):
     def forward(self, x: Tensor, guide: Tensor) -> Tensor:
         """Forward process."""
         if self.is_sparse:
-            sp_infer = SPInfer(self.sp_type)
-            for name, m in zip(self.sparse_module_name, self.sparse_module_list):
-                sp_infer._replace_spinfer(name, m, self)
+            # sp_infer = SPInfer(self.sp_type)
+            # for name, m in zip(self.sparse_module_name, self.sparse_module_list):
+            #     sp_infer._replace_spinfer(name, m, self)
             x_main = self.main_conv(x)
             x_main_ = list(x_main.features.split((self.mid_channels, self.mid_channels), 1))
             # start_event = torch.cuda.Event(enable_timing=True)
@@ -299,8 +299,8 @@ class DownSampleConvSPInfer(BaseModule):
         self.sparse_module_list = [getattr(self, name) for name in self.sparse_module_name]
         
     def forward(self, x: Tensor):
-        if self.is_sparse:
-            sp_infer = SPInfer(self.sp_type)
-            for name, m in zip(self.sparse_module_name, self.sparse_module_list):
-                sp_infer._replace_spinfer(name, m, self)
+        # if self.is_sparse:
+        #     sp_infer = SPInfer(self.sp_type)
+        #     for name, m in zip(self.sparse_module_name, self.sparse_module_list):
+        #         sp_infer._replace_spinfer(name, m, self)
         return self.conv(x)

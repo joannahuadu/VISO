@@ -44,7 +44,11 @@ class SPInfer:
                 act = module.activate
             else:
                 act = None
-            setattr(parent, name, self.make_conv(weights, biases, act)) # TODO: _make_spconv -> _make_conv
+            if module.with_norm:
+                norm = module.norm
+            else:
+                norm = None
+            setattr(parent, name, self.make_conv(weights, biases, act, norm)) # TODO: _make_spconv -> _make_conv
             return
         elif isinstance(module, nn.Conv2d):
             weights, biases = get_params(module)
@@ -54,54 +58,58 @@ class SPInfer:
             for name, child in module.named_children():
                 self._replace_spinfer(name, child, module)
                 
-    def _make_vspconv(self, weights, biases, act=None):
+    def _make_vspconv(self, weights, biases, act=None, norm=None):
         nets = []
         in_channel  = weights.shape[1]
         out_channel = weights.shape[0]
         k_size      = weights.shape[2]
-        filter = spconv.SubMConv2d(in_channel, out_channel, k_size, 1, padding=k_size//2, indice_key="asd", algo=spconv.ConvAlgo.Native).to(device=weights.device)
+        filter = spconv.SubMConv2d(in_channel, out_channel, k_size, 1, padding=k_size//2, indice_key="asd", algo=spconv.ConvAlgo.Native, bias=False).to(device=weights.device)
         filter.weight.data[:] = weights.permute(0,2,3,1).contiguous()[:] # transpose(1,2).transpose(0,1).transpose(2,3).transpose(1,2).transpose(2,3)
-        filter.bias.data   = biases
         nets.append(filter)
+        if not norm is None:
+            nets.append(norm)
         if not act == None:
             nets.append(act) ## TODO: Change into SiLU
         return spconv.SparseSequential(*nets)
 
-    def _make_spconv(self, weights, biases, act=None):
+    def _make_spconv(self, weights, biases, act=None, norm=None):
         nets = []
         in_channel  = weights.shape[1]
         out_channel = weights.shape[0]
         k_size      = weights.shape[2]
-        filter = spconv.SparseConv2d(in_channel, out_channel, k_size, 2, padding=k_size//2, indice_key="asd", algo=spconv.ConvAlgo.Native).to(device=weights.device)
+        filter = spconv.SparseConv2d(in_channel, out_channel, k_size, 2, padding=k_size//2, indice_key="asd", algo=spconv.ConvAlgo.Native, bias=False).to(device=weights.device)
         filter.weight.data[:] = weights.permute(0,2,3,1).contiguous()[:] # transpose(1,2).transpose(0,1).transpose(2,3).transpose(1,2).transpose(2,3)
-        filter.bias.data   = biases
         nets.append(filter)
+        if not norm is None:
+            nets.append(norm)
         if not act == None:
             nets.append(act) ## TODO: Change into SiLU
         return spconv.SparseSequential(*nets)
 
-    def _make_conv(self, weights, biases, act=None):
+    def _make_conv(self, weights, biases, act=None, norm=None):
         nets = []
         in_channel  = weights.shape[0]
         out_channel = weights.shape[1]
         k_size      = weights.shape[2]
-        filter = nn.Conv2d(in_channel, out_channel, k_size, 1, padding=k_size//2)
+        filter = nn.Conv2d(in_channel, out_channel, k_size, 1, padding=k_size//2, bias=False)
         filter.weight.data = weights
-        filter.bias.data   = biases
         nets.append(filter)
+        if not norm is None:
+            nets.append(norm)
         if not act is None:
             nets.append(act)
         return torch.nn.Sequential(*nets)
 
-    def _make_dconv(self, weights, biases, act=None):
+    def _make_dconv(self, weights, biases, act=None, norm=None):
         nets = []
         in_channel  = weights.shape[0]
         out_channel = weights.shape[1]
         k_size      = weights.shape[2]
-        filter = nn.Conv2d(in_channel, out_channel, k_size, 2, padding=k_size//2)
+        filter = nn.Conv2d(in_channel, out_channel, k_size, 2, padding=k_size//2, bias=False)
         filter.weight.data = weights
-        filter.bias.data   = biases
         nets.append(filter)
+        if not norm is None:
+            nets.append(norm)
         if not act is None:
             nets.append(act)
         return torch.nn.Sequential(*nets)
@@ -117,11 +125,11 @@ class SPInfer:
 def get_params(module) -> Tensor:
     # if not self.bn_converted:
     if isinstance(module, ConvModule):
-        _bn_convert(module)
-    
-    ws = module.weight.data
-    bs = module.bias.data
-    return ws, bs
+        # _bn_convert(module)
+        ws = module.conv.weight.data
+    else:
+        ws = module.weight.data
+    return ws, None
 
 def _bn_convert(module):
     # assert not self.training
