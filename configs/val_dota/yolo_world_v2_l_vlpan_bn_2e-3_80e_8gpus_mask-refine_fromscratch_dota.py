@@ -262,12 +262,12 @@ dota_train_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/public/home/wang_mq22/workplace/YOLO-World/data/split_ss_dota/',
+        data_root='./data/split_ss_dota/',
         ann_file='trainval/annfiles/',
         data_prefix=dict(img='trainval/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/public/home/wang_mq22/workplace/YOLO-World/data/texts/dota_v1_class_texts.json',
+    class_text_path='./data/texts/dota_v1_class_texts.json',
     pipeline=train_pipeline)
 
 train_dataloader = dict(
@@ -310,12 +310,12 @@ dota_val_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/public/home/wang_mq22/workplace/YOLO-World/data/split_ss_dota/',
+        data_root='./data/split_ss_dota/',
         test_mode=True,
         ann_file='trainval/annfiles/',
         data_prefix=dict(img='trainval/images/'),
         batch_shapes_cfg=None),
-    class_text_path='/public/home/wang_mq22/workplace/YOLO-World/data/texts/dota_v1_class_texts.json',
+    class_text_path='./data/texts/dota_v1_class_texts.json',
     pipeline=test_pipeline)
 val_dataloader = dict(dataset=dota_val_dataset)
 test_dataloader = val_dataloader

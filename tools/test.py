@@ -62,6 +62,7 @@ def parse_args():
         default='none',
         help='job launcher')
     parser.add_argument('--local-rank', type=int, default=0)
+    parser.add_argument('--isDebug', action='store_true')
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
@@ -70,7 +71,15 @@ def parse_args():
 
 def main():
     args = parse_args()
-
+    if args.isDebug:
+        try:
+            import debugpy
+            debugpy.listen(5678)
+            print("Waiting for debugger attach")
+            debugpy.wait_for_client()
+        except Exception as e:
+            print(f"debugpy not available for some reason: {e}")
+            
     # load config
     cfg = Config.fromfile(args.config)
     # replace the ${key} with the value of cfg.key
