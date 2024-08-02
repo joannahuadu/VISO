@@ -128,19 +128,18 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
     def __init__(self,
                  reduce_num_heads: List[int],
                  reduce_block_cfg: ConfigType = dict(type='KnowledgeAttnBlock'),
-                 sp_type: str = "vspconv",
                  is_sparse_levels: List[int] = [1,1,0],
                  score_th: float = 0.501,
                  downsample_block_cfg: ConfigType = dict(type='DownSampleConvSPInfer'),
                  *args, **kwargs) -> None:
         self.reduce_num_heads = reduce_num_heads
         self.reduce_block_cfg = reduce_block_cfg
-        self.sp_type = sp_type
         self.is_sparse_levels = is_sparse_levels
         self.downsample_block_cfg = downsample_block_cfg
         super().__init__(*args, **kwargs)
         assert len(self.is_sparse_levels) == len(self.in_channels)
         self.score_th = score_th
+        self.sp_module = ['top_down_layers', 'downsample_layers', 'bottom_up_layers']
     
     def build_top_down_layer(self, idx: int) -> nn.Module:
         """build top down layer.
@@ -151,7 +150,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         Returns:
             nn.Module: The top down layer.
         """
-        self.block_cfg.update(dict(is_sparse = self.is_sparse_levels[idx - 1], sp_type = self.sp_type))
+        self.block_cfg.update(dict(is_sparse = self.is_sparse_levels[idx - 1]))
         return super().build_top_down_layer(idx)
 
     def build_bottom_up_layer(self, idx: int) -> nn.Module:
@@ -163,7 +162,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         Returns:
             nn.Module: The bottom up layer.
         """
-        self.block_cfg.update(dict(is_sparse = self.is_sparse_levels[idx + 1], sp_type = self.sp_type))
+        self.block_cfg.update(dict(is_sparse = self.is_sparse_levels[idx + 1]))
         return super().build_bottom_up_layer(idx)
     
     def build_downsample_layer(self, idx: int) -> nn.Module:

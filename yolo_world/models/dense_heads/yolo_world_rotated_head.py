@@ -1260,11 +1260,11 @@ class YOLOWorldRotatedHeadModuleSPInfer(YOLOWorldRotatedHeadModule):
         assert len(img_feats) == self.num_levels
         txt_feats = [txt_feats for _ in range(self.num_levels)]
         
-        sp_infer = SPInfer(self.sp_type)
-        for idx, is_sparse in enumerate(self.is_sparse_levels):
-            if is_sparse:
-                for m in self.sparse_module_list:
-                    sp_infer._replace_spinfer(str(idx), m[idx], m)
+        # sp_infer = SPInfer(self.sp_type)
+        # for idx, is_sparse in enumerate(self.is_sparse_levels):
+        #     if is_sparse:
+        #         for m in self.sparse_module_list:
+        #             sp_infer._replace_spinfer(str(idx), m[idx], m)
 
         return multi_apply(self.forward_single, img_feats, img_attns, txt_feats, self.is_sparse_levels,
                            self.cls_preds, self.reg_convs, self.reg_preds, self.ang_preds, self.cls_contrasts)
@@ -1317,7 +1317,8 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
                 *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.num_levels = self.head_module.num_levels
-
+        self.sp_module = ['head_module']
+    
     def predict(self,
                 img_feats: Tuple[Tensor],
                 txt_feats: Tensor,
