@@ -162,9 +162,9 @@ class KnowledgeAttnBlock(BaseModule):
         attn_weight = attn_weight + self.bias[None, :, None, None]
         attn_weight = attn_weight.sigmoid() * self.scale
         
-        x = x.reshape(B, self.num_heads, -1, H, W)
-        x = x * attn_weight.unsqueeze(2)
-        x = x.reshape(B, -1, H, W)
+        # x = x.reshape(B, self.num_heads, -1, H, W)
+        # x = x * attn_weight.unsqueeze(2)
+        # x = x.reshape(B, -1, H, W)
         return x, attn_weight
 
 @MODELS.register_module()

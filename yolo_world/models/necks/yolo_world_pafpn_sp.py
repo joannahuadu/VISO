@@ -11,7 +11,7 @@ from mmyolo.registry import MODELS
 from mmyolo.models.utils import make_divisible, make_round
 from mmyolo.models.necks.yolov8_pafpn import YOLOv8PAFPN
 from .yolo_world_pafpn import YOLOWorldPAFPN
-from ...utils.mask_vis import mask_visulize
+from ...utils.mask_vis import mask_visulize, featuremap_visulize
 from yolo_world.models.sputils import _make_sparse_tensor, _concat
 @MODELS.register_module()
 class YOLOWorldPAFPNSP(YOLOWorldPAFPN):
@@ -234,6 +234,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
             reduce_outs.append(self.reduce_layers[idx](img_feats[idx], txt_feats))
         if self.mask_vis:
             mask_visulize([attn_weight for _, attn_weight in reduce_outs])
+            featuremap_visulize([feature_value for feature_value, _ in reduce_outs])
             
         base_attns = []
         for idx in range(len(self.in_channels)):
