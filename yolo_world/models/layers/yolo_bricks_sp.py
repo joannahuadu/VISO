@@ -9,10 +9,8 @@ from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule, Linear
 from mmdet.utils import ConfigType, OptConfigType, OptMultiConfig
 from mmengine.model import BaseModule
 from mmyolo.registry import MODELS
-from mmyolo.models.layers import CSPLayerWithTwoConv
 from .yolo_bricks import MaxSigmoidCSPLayerWithTwoConv
-import spconv.pytorch as spconv
-from yolo_world.models.sputils import SPInfer
+
 # import time
 @MODELS.register_module()
 class MaxSigmoidAttnBlockSPInfer(BaseModule):
