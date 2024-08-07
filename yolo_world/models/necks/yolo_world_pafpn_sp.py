@@ -11,7 +11,8 @@ from mmyolo.registry import MODELS
 from mmyolo.models.utils import make_divisible, make_round
 from mmyolo.models.necks.yolov8_pafpn import YOLOv8PAFPN
 from .yolo_world_pafpn import YOLOWorldPAFPN
-from yolo_world.models.sputils import _make_sparse_tensor, _concat
+from ...utils.mask_vis import mask_visulize
+from yolo_world.models.sputils import _make_indice_tensor, _concat
 @MODELS.register_module()
 class YOLOWorldPAFPNSP(YOLOWorldPAFPN):
     """Path Aggregation Network with sparse convolution used in YOLO World
@@ -21,31 +22,31 @@ class YOLOWorldPAFPNSP(YOLOWorldPAFPN):
                 #  reduce_embed_channels: List[int],
                  reduce_num_heads: List[int],
                  reduce_block_cfg: ConfigType = dict(type='KnowledgeAttnBlock'),
-                 downsample_block_cfg: ConfigType = dict(type='DownSampleConvSP'),
+                #  downsample_block_cfg: ConfigType = dict(type='DownSampleConvSP'),
                  *args, **kwargs) -> None:
         # self.reduce_embed_channels = reduce_embed_channels
         self.reduce_num_heads = reduce_num_heads
         self.reduce_block_cfg = reduce_block_cfg
-        self.downsample_block_cfg = downsample_block_cfg
+        # self.downsample_block_cfg = downsample_block_cfg
         super().__init__(*args, **kwargs)
 
-    def build_downsample_layer(self, idx: int) -> nn.Module:
-        """build downsample layer.
+    # def build_downsample_layer(self, idx: int) -> nn.Module:
+    #     """build downsample layer.
 
-        Args:
-            idx (int): layer idx.
+    #     Args:
+    #         idx (int): layer idx.
 
-        Returns:
-            nn.Module: The downsample layer.
-        """
-        downsample_block_cfg = copy.deepcopy(self.downsample_block_cfg)
-        downsample_block_cfg.update(in_channels=make_divisible(
-                                    self.in_channels[idx], self.widen_factor),
-                                    out_channels=make_divisible(
-                                    self.in_channels[idx], self.widen_factor),
-                                    norm_cfg=self.norm_cfg,
-                                    act_cfg=self.act_cfg)
-        return MODELS.build(downsample_block_cfg)
+    #     Returns:
+    #         nn.Module: The downsample layer.
+    #     """
+    #     downsample_block_cfg = copy.deepcopy(self.downsample_block_cfg)
+    #     downsample_block_cfg.update(in_channels=make_divisible(
+    #                                 self.in_channels[idx], self.widen_factor),
+    #                                 out_channels=make_divisible(
+    #                                 self.in_channels[idx], self.widen_factor),
+    #                                 norm_cfg=self.norm_cfg,
+    #                                 act_cfg=self.act_cfg)
+    #     return MODELS.build(downsample_block_cfg)
         
 
     def build_reduce_layer(self, idx: int) -> nn.Module:
@@ -128,20 +129,21 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
     def __init__(self,
                  reduce_num_heads: List[int],
                  reduce_block_cfg: ConfigType = dict(type='KnowledgeAttnBlock'),
-                 sp_type: str = "vspconv",
                  is_sparse_levels: List[int] = [1,1,0],
+                 mask_vis: bool = False,
                  score_th: float = 0.501,
-                 downsample_block_cfg: ConfigType = dict(type='DownSampleConvSPInfer'),
+                #  downsample_block_cfg: ConfigType = dict(type='DownSampleConvSPInfer'),
                  *args, **kwargs) -> None:
         self.reduce_num_heads = reduce_num_heads
         self.reduce_block_cfg = reduce_block_cfg
-        self.sp_type = sp_type
         self.is_sparse_levels = is_sparse_levels
-        self.downsample_block_cfg = downsample_block_cfg
+        # self.downsample_block_cfg = downsample_block_cfg
         super().__init__(*args, **kwargs)
         assert len(self.is_sparse_levels) == len(self.in_channels)
         self.score_th = score_th
-    
+        self.sp_module = ['top_down_layers', 'bottom_up_layers']
+        self.mask_vis = mask_vis
+
     def build_top_down_layer(self, idx: int) -> nn.Module:
         """build top down layer.
 
@@ -151,7 +153,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         Returns:
             nn.Module: The top down layer.
         """
-        self.block_cfg.update(dict(is_sparse = self.is_sparse_levels[idx - 1], sp_type = self.sp_type))
+        self.block_cfg.update(dict(is_sparse = self.is_sparse_levels[idx - 1]))
         return super().build_top_down_layer(idx)
 
     def build_bottom_up_layer(self, idx: int) -> nn.Module:
@@ -163,27 +165,26 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         Returns:
             nn.Module: The bottom up layer.
         """
-        self.block_cfg.update(dict(is_sparse = self.is_sparse_levels[idx + 1], sp_type = self.sp_type))
+        self.block_cfg.update(dict(is_sparse = self.is_sparse_levels[idx + 1]))
         return super().build_bottom_up_layer(idx)
     
-    def build_downsample_layer(self, idx: int) -> nn.Module:
-        """build downsample layer.
+    # def build_downsample_layer(self, idx: int) -> nn.Module:
+    #     """build downsample layer.
 
-        Args:
-            idx (int): layer idx.
+    #     Args:
+    #         idx (int): layer idx.
 
-        Returns:
-            nn.Module: The downsample layer.
-        """
-        downsample_block_cfg = copy.deepcopy(self.downsample_block_cfg)
-        downsample_block_cfg.update(in_channels=make_divisible(
-                                    self.in_channels[idx], self.widen_factor),
-                                    out_channels=make_divisible(
-                                    self.in_channels[idx], self.widen_factor),
-                                    norm_cfg=self.norm_cfg,
-                                    act_cfg=self.act_cfg,
-                                    is_sparse = self.is_sparse_levels[idx+1])
-        return MODELS.build(downsample_block_cfg)
+    #     Returns:
+    #         nn.Module: The downsample layer.
+    #     """
+    #     downsample_block_cfg = copy.deepcopy(self.downsample_block_cfg)
+    #     downsample_block_cfg.update(in_channels=make_divisible(
+    #                                 self.in_channels[idx], self.widen_factor),
+    #                                 out_channels=make_divisible(
+    #                                 self.in_channels[idx], self.widen_factor),
+    #                                 norm_cfg=self.norm_cfg,
+    #                                 act_cfg=self.act_cfg)
+    #     return MODELS.build(downsample_block_cfg)
     
     def build_reduce_layer(self, idx: int) -> nn.Module:
         """build reduce layer.
@@ -229,7 +230,9 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         reduce_outs = []
         for idx in range(len(self.in_channels)):
             reduce_outs.append(self.reduce_layers[idx](img_feats[idx], txt_feats))
-        
+        if self.mask_vis:
+            mask_visulize([attn_weight for _, attn_weight in reduce_outs])
+            
         base_attns = []
         for idx in range(len(self.in_channels)):
             base_attns.append(self._sparse_indices(*reduce_outs[idx]))
@@ -240,28 +243,26 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         for idx in range(len(self.in_channels) - 1, 0, -1):
             feat_high = inner_outs[0]
             inner_attn = inner_attns[0]
-            feat_low = _make_sparse_tensor(
+            feat_low = _make_indice_tensor(
                             reduce_outs[idx - 1][0], 
-                            base_attns[idx - 1], 
-                            self.is_sparse_levels[idx - 1])
-            upsample_feat = _make_sparse_tensor(
+                            base_attns[idx - 1])
+            upsample_feat = _make_indice_tensor(
                                     self.upsample_layers[len(self.in_channels) - 1 - 
                                                          idx](feat_high), 
                                     inner_attn, 
-                                    is_sparse=self.is_sparse_levels[idx - 1], 
                                     project='up')
             if self.upsample_feats_cat_first:
-                top_down_layer_inputs, inner_attn = _concat(upsample_feat, feat_low)
+                top_down_layer_inputs, inner_attn = _concat(upsample_feat, feat_low, self.is_sparse_levels[idx - 1])
                 # top_down_layer_inputs = torch.cat([upsample_feat, feat_low], 1)
             else:
-                top_down_layer_inputs, inner_attn = _concat(feat_low, upsample_feat)
+                top_down_layer_inputs, inner_attn = _concat(feat_low, upsample_feat, self.is_sparse_levels[idx - 1])
                 # top_down_layer_inputs = torch.cat([feat_low, upsample_feat], 1)
             inner_out = self.top_down_layers[len(self.in_channels) - 1 - idx](
                 top_down_layer_inputs, txt_feats)
             if self.is_sparse_levels[idx - 1]:
                 inner_outs.insert(0, inner_out.dense(channels_first=True))
             else:
-                inner_outs.insert(0, inner_out)
+                inner_outs.insert(0, torch.tensor(inner_out))
             inner_attns.insert(0, inner_attn)
         
         # bottom-up path
@@ -269,15 +270,15 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         out_attns = [inner_attns[0]]
         for idx in range(len(self.in_channels) - 1):
             out_attn = out_attns[-1]
-            feat_low = _make_sparse_tensor(outs[-1], out_attn, self.is_sparse_levels[idx + 1])
-            feat_high = _make_sparse_tensor(inner_outs[idx + 1], inner_attns[idx + 1], self.is_sparse_levels[idx + 1])
-            downsample_feat = _make_sparse_tensor(self.downsample_layers[idx](feat_low), out_attn, self.is_sparse_levels[idx + 1], project='down')
-            bottom_up_layer_inputs, out_attn = _concat(downsample_feat, feat_high)
+            feat_low = outs[-1]
+            feat_high = _make_indice_tensor(inner_outs[idx + 1], inner_attns[idx + 1])
+            downsample_feat = _make_indice_tensor(self.downsample_layers[idx](feat_low), out_attn, project='down')
+            bottom_up_layer_inputs, out_attn = _concat(downsample_feat, feat_high, self.is_sparse_levels[idx + 1])
             out = self.bottom_up_layers[idx](bottom_up_layer_inputs, txt_feats)
             if self.is_sparse_levels[idx + 1]:
                 outs.append(out.dense(channels_first=True))
             else:
-                outs.append(out)
+                outs.append(torch.tensor(out))
             out_attns.append(out_attn)
         
         # out_layers

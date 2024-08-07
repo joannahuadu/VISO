@@ -2,12 +2,12 @@ import spconv.pytorch as spconv
 import torch
 import torch.nn as nn
 from mmyolo.models.layers import DarknetBottleneck
-device='cuda:0'
+device='cpu'
 from yolo_world.models.sputils import SPInfer
 import numpy as np
 # x_d = torch.zeros((1, 128, 256, 256))
 channel = 128
-H, W = 512, 512
+H, W = 256, 256
 # torch.Size([1, 256, 200, 304])
 sp = [H, int(H*3/4), int(H*2/3), int(H*1/2), int(H*1/3), int(H*1/4), int(H*1/5), int(H*1/10)]
 # sp = [20]

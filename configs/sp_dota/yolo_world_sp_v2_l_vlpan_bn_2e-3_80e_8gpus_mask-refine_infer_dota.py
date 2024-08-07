@@ -9,12 +9,11 @@ is_sparse_levels = [1,0,0]
 # model settings
 model = dict(
     neck=dict(type='YOLOWorldPAFPNSPInfer',
-              block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConvSPInfer'),
-              sp_type="vspconv",
+              block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConvSPInfer', sp_type="vspconv"),
               is_sparse_levels = is_sparse_levels,
-              score_th=0.01,
+              score_th=0.505,
             #   reduce_embed_channels=neck_reduce_embed_channels,
-              downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),
+            #   downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),
               reduce_num_heads=neck_reduce_num_heads,
               reduce_block_cfg=dict(type='KnowledgeAttnBlock')),
     bbox_head=dict(type='YOLOWorldRotatedHeadSPInfer',
@@ -31,3 +30,9 @@ dota_val_dataset = dict(
 val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
+
+custom_hooks = [
+    dict(
+        type='SPHook',
+    )
+]

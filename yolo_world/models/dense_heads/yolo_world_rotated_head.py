@@ -34,7 +34,7 @@ except ImportError:
     RotatedBoxes = None
     distance2obb = None
     MMROTATE_AVAILABLE = False
-from yolo_world.models.sputils import _make_sparse_tensor, SPInfer
+from yolo_world.models.sputils import _make_sparse_tensor
 
 @MODELS.register_module()
 class YOLOWorldRotatedHeadModule(YOLOv8HeadModule):
@@ -1260,11 +1260,11 @@ class YOLOWorldRotatedHeadModuleSPInfer(YOLOWorldRotatedHeadModule):
         assert len(img_feats) == self.num_levels
         txt_feats = [txt_feats for _ in range(self.num_levels)]
         
-        sp_infer = SPInfer(self.sp_type)
-        for idx, is_sparse in enumerate(self.is_sparse_levels):
-            if is_sparse:
-                for m in self.sparse_module_list:
-                    sp_infer._replace_spinfer(str(idx), m[idx], m)
+        # sp_infer = SPInfer(self.sp_type)
+        # for idx, is_sparse in enumerate(self.is_sparse_levels):
+        #     if is_sparse:
+        #         for m in self.sparse_module_list:
+        #             sp_infer._replace_spinfer(str(idx), m[idx], m)
 
         return multi_apply(self.forward_single, img_feats, img_attns, txt_feats, self.is_sparse_levels,
                            self.cls_preds, self.reg_convs, self.reg_preds, self.ang_preds, self.cls_contrasts)
@@ -1276,8 +1276,9 @@ class YOLOWorldRotatedHeadModuleSPInfer(YOLOWorldRotatedHeadModule):
                        cls_contrast: nn.ModuleList) -> Tuple:
         """Forward feature of a single scale level."""
         b, _, h, w = img_feat.shape
-        img_feat = _make_sparse_tensor(img_feat, img_attn, is_sparse, ishead=True)
-        if is_sparse:        
+        # img_feat = _make_indice_tensor(img_feat, img_attn, ishead=True)
+        if is_sparse:
+            img_feat = _make_sparse_tensor(img_feat, img_attn)
             cls_embed = cls_pred(img_feat).dense(channels_first=True)
             cls_logit = cls_contrast(cls_embed, txt_feat)
             bbox_dist_preds = reg_pred(reg_conv(img_feat)).dense(channels_first=True)
@@ -1307,7 +1308,13 @@ class YOLOWorldRotatedHeadModuleSPInfer(YOLOWorldRotatedHeadModule):
         if self.training:
             return cls_logit, bbox_preds, ang_preds, bbox_dist_preds, angle_dist_preds
         else:
-            return cls_logit, bbox_preds, ang_preds
+            if is_sparse:
+                featmap_sizes = cls_logit.shape[2:]
+                inds = (img_attn[:,1] * featmap_sizes[0] + img_attn[:,2]).long()
+                return cls_logit.permute(0, 2, 3, 1).reshape(-1, self.num_classes)[inds], bbox_preds.permute(0, 2, 3, 1).reshape(-1, 4)[inds], ang_preds.permute(0, 2, 3, 1).reshape(-1, self.angle_out_dim)[inds], featmap_sizes, inds
+            else:
+                featmap_sizes = cls_logit.shape[2:]
+                return cls_logit.permute(0, 2, 3, 1).reshape(-1, self.num_classes), bbox_preds.permute(0, 2, 3, 1).reshape(-1, 4), ang_preds.permute(0, 2, 3, 1).reshape(-1, self.angle_out_dim), featmap_sizes, None
 
 @MODELS.register_module()
 class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
@@ -1317,7 +1324,8 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
                 *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.num_levels = self.head_module.num_levels
-
+        self.sp_module = ['head_module']
+    
     def predict(self,
                 img_feats: Tuple[Tensor],
                 txt_feats: Tensor,
@@ -1345,6 +1353,8 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
                         cls_scores: List[Tensor],
                         bbox_preds: List[Tensor],
                         angle_preds: List[Tensor],
+                        featmap_sizes: List[Tensor],
+                        featmap_inds: List[Tensor],
                         objectnesses: Optional[List[Tensor]] = None,
                         batch_img_metas: Optional[List[dict]] = None,
                         cfg: Optional[ConfigDict] = None,
@@ -1405,7 +1415,7 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
         decode_with_angle = cfg.get('decode_with_angle', True)
         
         num_imgs = len(batch_img_metas)
-        featmap_sizes = [cls_score.shape[2:] for cls_score in cls_scores]
+        # featmap_sizes = [cls_score.shape[2:] for cls_score in cls_scores]
 
         # If the shape does not change, use the previous mlvl_priors
         if featmap_sizes != self.featmap_sizes:
@@ -1414,28 +1424,32 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
                 dtype=cls_scores[0].dtype,
                 device=cls_scores[0].device)
             self.featmap_sizes = featmap_sizes
-        flatten_priors = torch.cat(self.mlvl_priors)
+        # flatten_priors = torch.cat(self.mlvl_priors)
+        flatten_priors = torch.cat([self.mlvl_priors[i] if inds is None else self.mlvl_priors[i][inds] for i, inds in enumerate(featmap_inds)])
 
+        # mlvl_strides = [
+        #     flatten_priors.new_full(
+        #         (featmap_size.numel() * self.num_base_priors, ), stride) for
+        #     featmap_size, stride in zip(featmap_sizes, self.featmap_strides)
+        # ]
         mlvl_strides = [
             flatten_priors.new_full(
-                (featmap_size.numel() * self.num_base_priors, ), stride) for
-            featmap_size, stride in zip(featmap_sizes, self.featmap_strides)
+                ((featmap_size.numel() if inds is None else len(inds)) * self.num_base_priors, ), stride) 
+            for featmap_size, inds, stride in zip(featmap_sizes, featmap_inds, self.featmap_strides)
         ]
         flatten_stride = torch.cat(mlvl_strides)
 
         # flatten cls_scores, bbox_preds and objectness
         flatten_cls_scores = [
-            cls_score.permute(0, 2, 3, 1).reshape(num_imgs, -1,
-                                                  self.num_classes)
+            cls_score.reshape(num_imgs, -1, self.num_classes)
             for cls_score in cls_scores
         ]
         flatten_bbox_preds = [
-            bbox_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1, 4)
+            bbox_pred.reshape(num_imgs, -1, 4)
             for bbox_pred in bbox_preds
         ]
         flatten_angle_preds = [
-            angle_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1,
-                                                   self.angle_out_dim)
+            angle_pred.reshape(num_imgs, -1, self.angle_out_dim)
             for angle_pred in angle_preds
         ]
         

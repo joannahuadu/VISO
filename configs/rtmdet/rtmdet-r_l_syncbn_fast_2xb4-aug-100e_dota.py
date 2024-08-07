@@ -3,7 +3,7 @@ _base_ = './rtmdet-r_l_syncbn_fast_2xb4-36e_dota.py'
 # This config use longer schedule with Mixup, Mosaic and Random Rotate.
 
 # checkpoint = 'https://download.openmmlab.com/mmdetection/v3.0/rtmdet/cspnext_rsb_pretrain/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'  # noqa
-checkpoint = '/public/home/wang_mq22/workplace/YOLO-World/weights/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'
+checkpoint = './weights/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'
 # ========================modified parameters======================
 train_batch_size_per_gpu = 8
 # Base learning rate for optim_wrapper. Corresponding to 1xb8=8 bs
