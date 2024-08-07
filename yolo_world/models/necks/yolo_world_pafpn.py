@@ -10,7 +10,7 @@ from mmdet.utils import ConfigType, OptMultiConfig
 from mmyolo.registry import MODELS
 from mmyolo.models.utils import make_divisible, make_round
 from mmyolo.models.necks.yolov8_pafpn import YOLOv8PAFPN
-
+from ...utils.mask_vis import featuremap_visulize
 
 @MODELS.register_module()
 class YOLOWorldPAFPN(YOLOv8PAFPN):
@@ -32,11 +32,14 @@ class YOLOWorldPAFPN(YOLOv8PAFPN):
                                              momentum=0.03,
                                              eps=0.001),
                  act_cfg: ConfigType = dict(type='SiLU', inplace=True),
-                 init_cfg: OptMultiConfig = None) -> None:
+                 init_cfg: OptMultiConfig = None,
+                 mask_vis: bool = False,
+                 ) -> None:
         self.guide_channels = guide_channels
         self.embed_channels = embed_channels
         self.num_heads = num_heads
         self.block_cfg = block_cfg
+        self.mask_vis = mask_vis
         super().__init__(in_channels=in_channels,
                          out_channels=out_channels,
                          deepen_factor=deepen_factor,
@@ -112,7 +115,8 @@ class YOLOWorldPAFPN(YOLOv8PAFPN):
         reduce_outs = []
         for idx in range(len(self.in_channels)):
             reduce_outs.append(self.reduce_layers[idx](img_feats[idx]))
-
+        if self.mask_vis:
+            featuremap_visulize(reduce_outs)
         # top-down path
         inner_outs = [reduce_outs[-1]]
         for idx in range(len(self.in_channels) - 1, 0, -1):

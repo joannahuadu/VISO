@@ -21,7 +21,3 @@ dota_val_dataset = dict(
 val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
-
-val_evaluator = dict(_delete_=True, type='mmrotate.DOTAMetric', metric='mAP')
-test_evaluator = val_evaluator
-

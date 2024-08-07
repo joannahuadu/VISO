@@ -1,3 +1,4 @@
+weights.zip
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -124,4 +125,3 @@ work_dirs
 
 # venus
 venus_run.sh
-
