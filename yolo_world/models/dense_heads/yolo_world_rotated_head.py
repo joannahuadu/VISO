@@ -1337,17 +1337,16 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
         batch_img_metas = [
             data_samples.metainfo for data_samples in batch_data_samples
         ]
-        outs = self(img_feats[:self.num_levels], img_feats[self.num_levels:], txt_feats)
+        outs = self(img_feats, txt_feats)
         predictions = self.predict_by_feat(*outs,
                                            batch_img_metas=batch_img_metas,
                                            rescale=rescale)
         return predictions
     
     def forward(self, img_feats: Tuple[Tensor],
-                img_attns: Tuple[Tensor],
                 txt_feats: Tensor) -> Tuple[List]:
         """Forward features from the upstream network."""
-        return self.head_module(img_feats, img_attns, txt_feats)
+        return self.head_module(img_feats[:self.num_levels], img_feats[self.num_levels:], txt_feats)
     
     def predict_by_feat(self,
                         cls_scores: List[Tensor],

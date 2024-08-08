@@ -28,7 +28,8 @@ model = dict(
               # reduce_embed_channels=neck_reduce_embed_channels,
               reduce_num_heads=neck_reduce_num_heads,
               reduce_block_cfg=dict(type='KnowledgeAttnBlock'),
-              downsample_block_cfg=dict(type='DownSampleConvSP')),
+            #   downsample_block_cfg=dict(type='DownSampleConvSP')
+              ),
     bbox_head=dict(type='YOLOWorldRotatedHeadSP',
                    head_module=dict(featmap_strides=strides, 
                                     in_channels=in_channels),
