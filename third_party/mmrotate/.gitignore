@@ -119,7 +119,7 @@ dmypy.json
 .idea
 *work_dirs*
 data/
-data
+!tools/data/
 tmp
 
 # custom

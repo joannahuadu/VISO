@@ -8,7 +8,7 @@ _base_.visualizer.vis_backends = [
 
 dota_train_dataset = dict(
     dataset=dict(
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota_2048/',
+        data_root='/public/home/wang_mq22/workplace/YOLO-World/data/split_ss_dota_2048/',
         ann_file='train/annfiles/',
         data_prefix=dict(img_path='train/images/'))
 )
@@ -16,14 +16,10 @@ train_dataloader = dict(dataset=dota_train_dataset)
 
 dota_val_dataset = dict(
     dataset=dict(
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota_2048/',
+        data_root='/public/home/wang_mq22/workplace/YOLO-World/data/split_ss_dota_2048/',
         ann_file='val/annfiles/',
         data_prefix=dict(img_path='val/images/'),
         batch_shapes_cfg=None))
 val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
-
-val_evaluator = dict(_delete_=True, type='mmrotate.DOTAMetric', metric='mAP')
-test_evaluator = val_evaluator
-

@@ -3,6 +3,7 @@ from mmengine.visualization import Visualizer
 from .runner_manager import GlobalClass
 import cv2
 import numpy as np
+import torch
 
 def repeat_elements(arr, repeat_factor):
     """重复数组中的每个元素
@@ -42,3 +43,30 @@ def mask_visulize(masks):
     
     total_curr_iter = GlobalClass.get_instance('batch_idx').value + GlobalClass.get_instance('runner').value.iter + 1
     _visualizer.add_image('combined_mask', combined_heatmap, total_curr_iter)
+
+import torch
+
+def featuremap_visulize(feature_maps):
+    """将feature map调用visualizer画出来
+    Args:
+        feature_maps: shape = list(tensor(batchsize, c, h, w)) len(feature_maps) = 尺度数
+    """
+    _visualizer: Visualizer = Visualizer.get_current_instance()
+    assert feature_maps[0].shape[0] == 1 # 当前没有考虑batchsize > 1的情况
+    
+    heatmaps = []
+    max_size = max(feature_map.shape[2] for feature_map in feature_maps)  # 找到最大的尺寸
+
+    for i in range(len(feature_maps)):
+        feature_map = feature_maps[i][0]
+        
+        resized_feature_map = torch.tensor([repeat_elements(channel.cpu().numpy(), max_size // channel.shape[1]) for channel in feature_map])
+        
+        image = _visualizer.draw_featmap(resized_feature_map)  # 返回: np.ndarray: RGB image.
+        
+        heatmaps.append(image)
+    
+    combined_heatmap = np.hstack(heatmaps)
+    
+    total_curr_iter = GlobalClass.get_instance('batch_idx').value + GlobalClass.get_instance('runner').value.iter + 1
+    _visualizer.add_image('combined_featuremap', combined_heatmap, total_curr_iter)
