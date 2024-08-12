@@ -28,7 +28,10 @@ class SPHook(Hook):
         Args:
             runner (Runner): The runner of the training process.
         """
-        model = runner.model.module
+        try:
+            model = runner.model.module
+        except Exception as e:
+            model = runner.model
         sparse_part_name = ['neck']
         sparse_part  = [getattr(model, name) for name in sparse_part_name]
         for module in sparse_part:
