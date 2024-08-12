@@ -18,7 +18,7 @@ neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
 base_lr = 2e-3
 weight_decay = 0.05
 train_batch_size_per_gpu = 4
-load_from = "/home/becool1/wd/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
+load_from = "weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 
 persistent_workers = False
 
@@ -254,7 +254,7 @@ dota_train_dataset = dict(
         _delete_=True,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
+        data_root='data/split_ss_dota/',
         ann_file='trainval/annfiles/',
         data_prefix=dict(img_path='trainval/images/'),
         filter_cfg=dict(filter_empty_gt=True),
@@ -298,7 +298,7 @@ dota_val_dataset = dict(
         _delete_=True,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
+        data_root='data/split_ss_dota/',
         test_mode=True,
         ann_file='trainval/annfiles/',
         data_prefix=dict(img_path='trainval/images/'),
