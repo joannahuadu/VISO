@@ -96,13 +96,13 @@ default_scope = 'mmyolo'
 dota_train_dataset = dict(
     _delete_=True,
     class_text_path=
-    '/home/becool1/wd/YOLO-World/data/texts/dota_v1_class_texts.json',
+    './data/texts/dota_v1_class_texts.json',
     dataset=dict(
         _scope_='yolo_world',
         ann_file='train/annfiles/',
         batch_shapes_cfg=None,
         data_prefix=dict(img_path='train/images/'),
-        data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
+        data_root='./data/split_ss_dota/',
         filter_cfg=dict(filter_empty_gt=True),
         type='YOLOv5DOTADataset'),
     pipeline=[
@@ -169,13 +169,13 @@ dota_train_dataset = dict(
 dota_val_dataset = dict(
     _delete_=True,
     class_text_path=
-    '/home/becool1/wd/YOLO-World/data/texts/dota_v1_class_texts.json',
+    './data/texts/dota_v1_class_texts.json',
     dataset=dict(
         _scope_='yolo_world',
         ann_file='val/annfiles/',
         batch_shapes_cfg=None,
         data_prefix=dict(img_path='val/images/'),
-        data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
+        data_root='./data/split_ss_dota/',
         test_mode=True,
         type='YOLOv5DOTADataset'),
     pipeline=[
@@ -269,7 +269,7 @@ last_transform = [
         ),
         type='mmdet.PackDetInputs'),
 ]
-load_from = '/home/becool1/wd/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth'
+load_from = './weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth'
 log_level = 'INFO'
 log_processor = dict(by_epoch=True, type='LogProcessor', window_size=50)
 loss_bbox_weight = 2.0
@@ -499,13 +499,13 @@ test_dataloader = dict(
     batch_size=1,
     dataset=dict(
         class_text_path=
-        '/home/becool1/wd/YOLO-World/data/texts/dota_v1_class_texts.json',
+        './data/texts/dota_v1_class_texts.json',
         dataset=dict(
             _scope_='yolo_world',
             ann_file='val/annfiles/',
             batch_shapes_cfg=None,
             data_prefix=dict(img_path='val/images/'),
-            data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
+            data_root='./data/split_ss_dota/',
             test_mode=True,
             type='YOLOv5DOTADataset'),
         pipeline=[
@@ -624,13 +624,13 @@ train_dataloader = dict(
     collate_fn=dict(type='yolow_collate'),
     dataset=dict(
         class_text_path=
-        '/home/becool1/wd/YOLO-World/data/texts/dota_v1_class_texts.json',
+        './data/texts/dota_v1_class_texts.json',
         dataset=dict(
             _scope_='yolo_world',
             ann_file='train/annfiles/',
             batch_shapes_cfg=None,
             data_prefix=dict(img_path='train/images/'),
-            data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
+            data_root='./data/split_ss_dota/',
             filter_cfg=dict(filter_empty_gt=True),
             type='YOLOv5DOTADataset'),
         pipeline=[
@@ -915,13 +915,13 @@ val_dataloader = dict(
     batch_size=1,
     dataset=dict(
         class_text_path=
-        '/home/becool1/wd/YOLO-World/data/texts/dota_v1_class_texts.json',
+        './data/texts/dota_v1_class_texts.json',
         dataset=dict(
             _scope_='yolo_world',
             ann_file='val/annfiles/',
             batch_shapes_cfg=None,
             data_prefix=dict(img_path='val/images/'),
-            data_root='/home/becool1/wd/YOLO-World/data/split_ss_dota/',
+            data_root='./data/split_ss_dota/',
             test_mode=True,
             type='YOLOv5DOTADataset'),
         pipeline=[

@@ -6,8 +6,8 @@ _base_ = (
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [1,1,1]
 
-load_from = "/mnt/data1/workspace/wmq/YOLO-World/work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_67.pth"
-embedding_path = "/mnt/data1/workspace/wmq/YOLO-World/tools/embeddings/dota_v1_class_texts_all_embedding.npy"
+load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_67.pth"
+embedding_path = "tools/embeddings/dota_v1_class_texts_all_embedding.npy"
 
 # model settings
 model = dict(type='SimpleYOLOWorldDetector',

@@ -97,7 +97,10 @@ class MaxSigmoidAttnBlockSPInfer(BaseModule):
 
         x = self.project_conv(x)
         if self.is_sparse:
-            attn_weight = attn_weight[:,:,x.indices[:,1],x.indices[:,2]].squeeze(0).permute(1, 0)
+            try:
+                attn_weight = attn_weight[:,:,x.indices[:,1],x.indices[:,2]].squeeze(0).permute(1, 0)
+            except Exception as e:
+                attn_weight = attn_weight[:,:,x.indices[:,1].long(),x.indices[:,2].long()].squeeze(0).permute(1, 0)
             x = x.replace_feature((x.features.reshape(len(x.indices), self.num_heads, -1) * attn_weight.unsqueeze(2)).reshape(len(x.indices), -1))
         else:
             x = x.reshape(B, self.num_heads, -1, H, W)
