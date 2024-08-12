@@ -13,7 +13,7 @@ model = dict(
     neck=dict(type='YOLOWorldPAFPNSPInfer',
               block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConvSPInfer', sp_type="vspconv"),
               is_sparse_levels = is_sparse_levels,
-              score_th=0.4,
+              score_th=0.01,
             #   reduce_embed_channels=neck_reduce_embed_channels,
             #   downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),
               reduce_num_heads=neck_reduce_num_heads,
