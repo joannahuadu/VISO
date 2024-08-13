@@ -16,7 +16,7 @@ from mmengine.logging import print_log
 
 from mmyolo.registry import MODELS
 from thop import profile
-from torchstat import stat
+# from torchstat import stat
 from thop import clever_format
 from spflops_utils import *
 import mmcv
