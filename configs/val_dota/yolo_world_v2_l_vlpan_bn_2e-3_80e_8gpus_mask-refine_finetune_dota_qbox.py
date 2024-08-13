@@ -10,7 +10,7 @@ num_classes = 15
 num_training_classes = 15
 max_epochs = 80  # Maximum training epochs
 close_mosaic_epochs = 10
-save_epoch_intervals = 5
+save_epoch_intervals = 3
 text_channels = 512
 neck_embed_channels = [128, 256, _base_.last_stage_out_channels // 2]
 neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
@@ -264,7 +264,7 @@ default_hooks = dict(
         max_epochs=max_epochs),
     checkpoint=dict(
         max_keep_ckpts=-1,
-        save_best=None,
+        save_best=['dota/mAP'], # 按照mAP保存最佳模型
         interval=save_epoch_intervals))
 custom_hooks = [
     dict(

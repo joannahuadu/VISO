@@ -10,4 +10,5 @@ except importlib_metadata.PackageNotFoundError:
 from .models import *  # noqa
 from .datasets import *  # noqa
 from .engine import *  # noqa
-from .hooks import *
+from .hooks import * # noqa
+from .evaluation import *  # noqa
