@@ -1,16 +1,18 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 import os
+import os.path as osp
 
 from mmengine import MMLogger
 from mmengine.config import Config, DictAction
-from mmengine.dist import init_dist
+from mmengine.dist import init_dist, broadcast
 from mmengine.registry import init_default_scope
 from mmengine.utils import mkdir_or_exist
-
 from mmdet.utils.benchmark import (DataLoaderBenchmark, DatasetBenchmark,
                                    InferenceBenchmark)
 
+import torch
+import time
 
 def parse_args():
     parser = argparse.ArgumentParser(description='MMDet benchmark')
@@ -117,10 +119,26 @@ def main():
         init_dist(args.launcher, **cfg.get('env_cfg', {}).get('dist_cfg', {}))
         distributed = True
 
-    log_file = None
-    if args.work_dir:
-        log_file = os.path.join(args.work_dir, 'benchmark.log')
-        mkdir_or_exist(args.work_dir)
+    # log_file = None
+    # if args.work_dir:
+    #     log_file = os.path.join(args.work_dir, 'benchmark.log')
+    #     mkdir_or_exist(args.work_dir)
+    if args.work_dir is not None:
+        # update configs according to CLI args if args.work_dir is not None
+        cfg.work_dir = args.work_dir
+    elif cfg.get('work_dir', None) is None:
+        # use config filename as default work_dir if cfg.work_dir is None
+        cfg.work_dir = osp.join('./work_dirs',
+                                osp.splitext(osp.basename(args.config))[0], 'benchmark')
+    
+    timestamp = torch.tensor(time.time(), dtype=torch.float64)
+    # broadcast timestamp from 0 process to other processes
+    broadcast(timestamp)
+    _timestamp = time.strftime('%Y%m%d_%H%M%S',
+                                    time.localtime(timestamp.item()))
+    log_dir = osp.join(cfg.work_dir, _timestamp)
+    log_file = osp.join(log_dir, 'benchmark.log')
+    mkdir_or_exist(log_dir)
 
     logger = MMLogger.get_instance(
         'mmdet', log_file=log_file, log_level='INFO')

@@ -18,11 +18,7 @@ neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
 base_lr = 2e-3
 weight_decay = 0.05
 train_batch_size_per_gpu = 4
-# load_from = 'pretrained_models/yolo_world_l_clip_t2i_bn_2e-3adamw_32xb16-100e_obj365v1_goldg_cc3mlite_train-ca93cd1f.pth'
 load_from = "weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
-# text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
-text_model_name = 'openai/clip-vit-base-patch32'
-# text_model_name = '/public/home/wang_mq22/workplace/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268'
 
 persistent_workers = False
 
@@ -50,31 +46,30 @@ model_test_cfg = dict(
     max_per_img=2000)  # Max number of detections of each image
 # model settings
 model = dict(
-    type='YOLOWorldDetector',
+    type='SimpleYOLOWorldDetector',
     mm_neck=True,
-    num_train_classes=num_training_classes,
+    num_train_classes=num_classes,
     num_test_classes=num_classes,
-    data_preprocessor=dict(type='YOLOWDetDataPreprocessor'),
+    reparameterized=True,
+    data_preprocessor=dict(type='YOLOv5DetDataPreprocessor'),
     backbone=dict(
         _delete_=True,
         type='MultiModalYOLOBackbone',
+        text_model=None,
         image_model={{_base_.model.backbone}},
-        text_model=dict(
-            type='HuggingCLIPLanguageBackbone',
-            model_name=text_model_name,
-            frozen_modules=['all'])),
-            # frozen_stages = 4),
+        with_text_model=False),
     neck=dict(type='YOLOWorldPAFPN',
-              guide_channels=text_channels,
+              guide_channels=num_classes,
               embed_channels=neck_embed_channels,
               num_heads=neck_num_heads,
             #   freeze_all = True,
-              block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConv')),
-    bbox_head=dict(type='YOLOWorldRotatedHead',
-                   head_module=dict(type='YOLOWorldRotatedHeadModule',
-                                    use_bn_head=True,
+              block_cfg=dict(type='RepConvMaxSigmoidCSPLayerWithTwoConv',
+                            guide_channels=num_classes)),
+    bbox_head=dict(type='YOLOv8RotatedHead',
+                   head_module=dict(type='RepYOLOWorldRotatedHeadModule',
                                     embed_dims=text_channels,
-                                    num_classes=num_training_classes),
+                                    num_guide=num_classes,
+                                    num_classes=num_classes),
                 #    prior_generator=dict(
                 #                     _delete_=True,
                 #                     type='FakeRotatedAnchorGenerator',
@@ -172,15 +167,10 @@ pre_transform = [
 #                    'flip_direction'))
 # ]
 
-text_transform = [
-    dict(type='RandomLoadText',
-         num_neg_samples=(num_classes, num_classes),
-         max_num_samples=num_training_classes,
-         padding_to_max=True,
-         padding_value=''),
+final_transform = [
     dict(type='mmdet.PackDetInputs',
          meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape', 'flip',
-                    'flip_direction', 'texts'))
+                    'flip_direction'))
 ]
 
 # mosaic_affine_transform = [
@@ -231,7 +221,7 @@ train_pipeline = [
     dict(type='mmdet.Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
     dict(type='RegularizeRotatedBox', angle_version=angle_version),
     # dict(type='mmdet.PackDetInputs')
-    *text_transform
+    *final_transform
     
 ]
 
@@ -259,19 +249,17 @@ train_pipeline = [
 #     *text_transform
 # ]
 
+
 dota_train_dataset = dict(
-    _delete_=True,
-    type='MultiModalDataset',
-    dataset=dict(
+        _delete_=True,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
         data_root='data/split_ss_dota/',
         ann_file='trainval/annfiles/',
         data_prefix=dict(img_path='trainval/images/'),
         filter_cfg=dict(filter_empty_gt=True),
-        batch_shapes_cfg=None),
-    class_text_path='data/texts/dota_v1_class_texts.json',
-    pipeline=train_pipeline)
+        batch_shapes_cfg=None,
+        pipeline=train_pipeline)
 
 train_dataloader = dict(
     persistent_workers=persistent_workers,
@@ -300,28 +288,22 @@ test_pipeline = [
     #     pad_val=dict(img=114)),
     dict(type='mmdet.LoadAnnotations', with_bbox=True, box_type='qbox'),
     dict(type='mmrotate.ConvertBoxType', box_type_mapping=dict(gt_bboxes='rbox')),
-    dict(type='LoadText'),
     dict(
         type='mmdet.PackDetInputs',
         meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape',
-                    'scale_factor', 'texts'))
+                    'scale_factor'))
 ]
 
 dota_val_dataset = dict(
-    _delete_=True,
-    type='MultiModalDataset',
-    dataset=dict(
+        _delete_=True,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
         data_root='data/split_ss_dota/',
         test_mode=True,
         ann_file='trainval/annfiles/',
         data_prefix=dict(img_path='trainval/images/'),
-        batch_shapes_cfg=None),
-    class_text_path='data/texts/dota_v1_class_texts.json',
-    # class_text_path='data/texts/dota_v1_class_prompts.json',
-    # class_text_path='data/texts/dota_v1_class_texts_plane.json',
-    pipeline=test_pipeline)
+        batch_shapes_cfg=None,
+        pipeline=test_pipeline)
 val_dataloader = dict(dataset=dota_val_dataset)
 test_dataloader = val_dataloader
 
@@ -364,9 +346,6 @@ optim_wrapper = dict(
         lr=base_lr,
         weight_decay=weight_decay,
         batch_size_per_gpu=train_batch_size_per_gpu),
-    paramwise_cfg=dict(
-        custom_keys={'backbone.text_model': dict(lr_mult=0.01),
-                     'logit_scale': dict(weight_decay=0.0)}),
     constructor='YOLOWv5OptimizerConstructor')
 # # evaluation settings
 # val_evaluator = dict(
