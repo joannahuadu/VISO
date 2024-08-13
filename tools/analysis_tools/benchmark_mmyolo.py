@@ -86,7 +86,8 @@ def measure_inference_speed(cfg, checkpoint, max_iter, log_interval,
     runner.call_hook('before_test')
     runner.call_hook('before_test_epoch')
     model = runner.model
-    model = model.cuda()
+    if torch.cuda.is_available():
+        model = model.cuda()
     model.eval()
 
     # the first several iterations may be very slow so skip them
@@ -96,14 +97,14 @@ def measure_inference_speed(cfg, checkpoint, max_iter, log_interval,
 
     # benchmark with 2000 image and take the average
     for i, data in enumerate(data_loader):
-
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
         start_time = time.perf_counter()
 
         with torch.no_grad():
             model.test_step(data)
-
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
         elapsed = time.perf_counter() - start_time
 
         if i >= num_warmup:
