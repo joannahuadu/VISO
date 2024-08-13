@@ -12,7 +12,7 @@ from mmrotate.structures.bbox import RotatedBoxes
 from mmengine.structures import InstanceData
 
 @MODELS.register_module()
-class SimpleYOLOWorldDetectorSP (SimpleYOLOWorldDetector):
+class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
     """Implementation of YOLO World Series"""
 
     def __init__(self,
@@ -31,6 +31,7 @@ class SimpleYOLOWorldDetectorSP (SimpleYOLOWorldDetector):
         img_feats, txt_feats = self.extract_feat(batch_inputs,
                                                  batch_data_samples)
         if img_feats is None:
+            results_list=[]
             empty_scores = torch.tensor([], device=batch_inputs.device)
             empty_labels = torch.tensor([], device=batch_inputs.device)
             empty_bboxes = RotatedBoxes(torch.tensor([]), device=batch_inputs.device)
@@ -56,3 +57,21 @@ class SimpleYOLOWorldDetectorSP (SimpleYOLOWorldDetector):
         batch_data_samples = self.add_pred_to_datasample(
             batch_data_samples, results_list)
         return batch_data_samples
+    
+    def _forward(
+            self,
+            batch_inputs: Tensor,
+            batch_data_samples: OptSampleList = None) -> Tuple[List[Tensor]]:
+        """Network forward process. Usually includes backbone, neck and head
+        forward without any post-processing.
+        """
+        img_feats, txt_feats = self.extract_feat(batch_inputs,
+                                                 batch_data_samples)
+        if img_feats is None:
+            return
+
+        if self.reparameterized:
+            results = self.bbox_head.forward(img_feats)
+        else:
+            results = self.bbox_head.forward(img_feats, txt_feats)
+        return results

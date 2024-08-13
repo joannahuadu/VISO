@@ -10,7 +10,7 @@ load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_fi
 embedding_path = "tools/embeddings/dota_v1_class_texts_helicopter_embedding.npy"
 
 # model settings
-model = dict(type='SimpleYOLOWorldDetector',
+model = dict(type='SimpleYOLOWorldDetectorSP',
     mm_neck=True,
     num_train_classes=_base_.num_training_classes,
     num_test_classes=num_classes,
