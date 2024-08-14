@@ -446,3 +446,34 @@ class DownSampleConvSPInfer(BaseModule):
         #     for name, m in zip(self.sparse_module_name, self.sparse_module_list):
         #         sp_infer._replace_spinfer(name, m, self)
         return self.conv(x)
+
+@MODELS.register_module()
+class TextKnowledgeAttnBlock(KnowledgeAttnBlock):
+    """Max Sigmoid attention block."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    def forward(self, x: Tensor, guide: Tensor) -> Tensor:
+        """Forward process."""
+        B, _, H, W = x.shape
+
+        guide = self.guide_fc(guide)
+        guide = guide.reshape(B, -1, self.num_heads, self.head_channels)
+        embed = self.embed_conv(x)
+        embed = embed.reshape(B, self.num_heads, self.head_channels, H, W)
+
+        if self.use_einsum:
+            attn_weight = torch.einsum('bmchw,bnmc->bmhwn', embed, guide)
+        else:
+            batch, m, channel, height, width = embed.shape
+            _, n, _, _ = guide.shape
+            embed = embed.permute(0, 1, 3, 4, 2)
+            embed = embed.reshape(batch, m, -1, channel)
+            guide = guide.permute(0, 2, 3, 1)
+            attn_weight = torch.matmul(embed, guide)
+            attn_weight = attn_weight.reshape(batch, m, height, width, n)
+
+        attn_weight = attn_weight[0]
+
+        return x, attn_weight

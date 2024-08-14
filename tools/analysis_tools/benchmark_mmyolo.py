@@ -69,7 +69,7 @@ def measure_inference_speed(cfg, checkpoint, max_iter, log_interval,
 
     mp_cfg: dict = env_cfg.get('mp_cfg', {})
     set_multi_processing(**mp_cfg, distributed=cfg.distributed)
-
+    # cfg['default_hooks'] = dict()
     runner = Runner.from_cfg(cfg)
     # Because multiple processes will occupy additional CPU resources,
     # FPS statistics will be more unstable when num_workers is not 0.
