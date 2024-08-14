@@ -159,6 +159,8 @@ def _concat(f1, f2, is_sparse=False):
     B, fc, fh, fw = concat_features.shape
     assert B==1
     if is_sparse:
+        if concat_indices.shape[0] == 0:
+            concat_indices = concat_indices.reshape(0,3)
         sparse_y = concat_indices[:, 1]
         sparse_x = concat_indices[:, 2]
         sparse_inds = (sparse_y * fh + sparse_x).long()
