@@ -34,6 +34,7 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
 
 dota_val_dataset = dict(
     dataset=dict(
+        img_suffix='jpg',
         data_root='data/split_fMoW_1024/',
         ann_file='val/airport/annfiles/',
         data_prefix=dict(img_path='val/airport/images/'),
