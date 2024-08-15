@@ -2,7 +2,7 @@ _base_ = (
     'yolov8_s_mask-refine_syncbn_fast_2e-4_4xb4-80e_dota.py'
 )
 
-load_from = "/mnt/data1/workspace/wmq/YOLO-World/work_dirs/yolov8_s_mask-refine_syncbn_fast_2e-4_4xb4-80e_dota_train_val/best_dota_mAP_epoch_75.pth"
+load_from = "work_dirs/yolov8_s_mask-refine_syncbn_fast_2e-4_4xb4-80e_dota_train_val/best_dota_mAP_epoch_75.pth"
 
 dota_val_dataset = dict(
         ann_file='val/annfiles/',
