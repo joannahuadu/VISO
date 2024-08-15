@@ -9,7 +9,8 @@ from .yolo_bricks import (
     RepConvMaxSigmoidCSPLayerWithTwoConv,
     RepMaxSigmoidCSPLayerWithTwoConv
     )
-from .yolo_bricks_sp import MaxSigmoidCSPLayerWithTwoConvSPInfer, KnowledgeAttnBlock, MaxSigmoidAttnBlockSPInfer, DownSampleConvSP, DownSampleConvSPInfer
+from .yolo_bricks_sp import MaxSigmoidCSPLayerWithTwoConvSPInfer, KnowledgeAttnBlock, MaxSigmoidAttnBlockSPInfer, RepConvMaxSigmoidCSPLayerWithTwoConvSPInfer, RepConvMaxSigmoidAttnBlockSPInfer, DownSampleConvSP, DownSampleConvSPInfer
+from .yolov5_bricks import MaxSigmoidCSPLayer, CSPLayer
 
 __all__ = ['CSPLayerWithTwoConv',
            'MaxSigmoidAttnBlock',
@@ -21,4 +22,8 @@ __all__ = ['CSPLayerWithTwoConv',
            'MaxSigmoidCSPLayerWithTwoConvSPInfer', 
            'MaxSigmoidAttnBlockSPInfer',
            'DownSampleConvSP',
-           'DownSampleConvSPInfer']
+           'DownSampleConvSPInfer',
+           'RepConvMaxSigmoidCSPLayerWithTwoConvSPInfer',
+           'RepConvMaxSigmoidAttnBlockSPInfer',
+           'MaxSigmoidCSPLayer',
+           'CSPLayer']

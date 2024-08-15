@@ -7,9 +7,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from mmcv.cnn import ConvModule
+from mmcv.cnn import ConvModule, is_norm
 from mmengine.config import ConfigDict
-from mmengine.model import BaseModule, normal_init
+from mmengine.model import BaseModule, normal_init, constant_init
 from torch import Tensor
 from torch.nn.modules.batchnorm import _BatchNorm
 
@@ -22,11 +22,11 @@ from mmdet.utils import ConfigType, OptConfigType, InstanceList, OptInstanceList
 from mmdet.models.utils import (multi_apply, unpack_gt_instances,
                                 filter_scores_and_topk)
 from mmyolo.registry import MODELS, TASK_UTILS
-from mmyolo.models.dense_heads import YOLOv8HeadModule
+from mmyolo.models.dense_heads import YOLOv8HeadModule, YOLOv8Head
 from mmyolo.models.utils import gt_instances_preprocess
 from mmcv.cnn.bricks import build_norm_layer
 import cv2
-from .yolo_world_head import BNContrastiveHead, ContrastiveHead, YOLOWorldHead
+from .yolo_world_head import RepBNContrastiveHead, BNContrastiveHead, ContrastiveHead, YOLOWorldHead
 try:
     from mmrotate.structures.bbox import RotatedBoxes, distance2obb
     MMROTATE_AVAILABLE = True
@@ -43,6 +43,7 @@ class YOLOWorldRotatedHeadModule(YOLOv8HeadModule):
     Args:
         embed_dims (int): embed dim for text feautures and image features
         use_bn_head (bool): use batch normalization head
+        angle_out_dim (int): angle dimension for the angle head in rotated boxes prediction, default: 1
     """
 
     def __init__(self,
@@ -205,7 +206,7 @@ class YOLOWorldRotatedHeadModule(YOLOv8HeadModule):
         
 @MODELS.register_module()
 class YOLOWorldRotatedHead(YOLOWorldHead):
-    """YOLO-World Head
+    """YOLO-World Rotated Head
     """
 
     def __init__(self, 
@@ -938,48 +939,104 @@ class YOLOWorldQBoxHead(YOLOWorldHead):
         return results_list
 
 @MODELS.register_module()
-class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
-    """YOLO-World Head
+class RepYOLOWorldRotatedHeadModule(YOLOWorldRotatedHeadModule):
+
+    def __init__(self,
+                 *args,
+                 embed_dims: int,
+                 num_guide: int,
+                 freeze_all: bool = False,
+                 **kwargs) -> None:
+        super().__init__(*args,
+                         embed_dims=embed_dims,
+                         use_bn_head=True,
+                         use_einsum=False,
+                         freeze_all=freeze_all,
+                         **kwargs)
+
+        # using rep head
+        cls_contrasts = []
+        for _ in range(self.num_levels):
+            cls_contrasts.append(
+                RepBNContrastiveHead(
+                    embed_dims=embed_dims,
+                    num_guide_embeds=num_guide,
+                    norm_cfg=self.norm_cfg
+                )
+            )
+        self.cls_contrasts = nn.ModuleList(cls_contrasts)
+
+    def forward_single(self, img_feat: Tensor, cls_pred: nn.ModuleList,
+                       reg_conv: nn.ModuleList, reg_pred: nn.ModuleList, 
+                       ang_pred: nn.ModuleList,
+                       cls_contrast: nn.ModuleList) -> Tuple:
+        """Forward features from the upstream network."""
+        b, _, h, w = img_feat.shape
+        cls_embed = cls_pred(img_feat)
+        cls_logit = cls_contrast(cls_embed)
+        bbox_dist_preds = reg_pred(reg_conv(img_feat))
+        angle_dist_preds = ang_pred(reg_conv(img_feat))
+        if self.reg_max > 1:
+            bbox_dist_preds = bbox_dist_preds.reshape(
+                [-1, 4, self.reg_max, h * w]).permute(0, 3, 1, 2)
+            angle_dist_preds = angle_dist_preds.reshape(
+                [-1, 1, self.reg_max, h * w]).permute(0, 3, 1, 2)
+            # TODO: The get_flops script cannot handle the situation of
+            #  matmul, and needs to be fixed later
+            # bbox_preds = bbox_dist_preds.softmax(3).matmul(self.proj)
+            bbox_preds = bbox_dist_preds.softmax(3).matmul(
+                self.proj.view([-1, 1])).squeeze(-1)
+            bbox_preds = bbox_preds.transpose(1, 2).reshape(b, -1, h, w)
+            ang_preds = angle_dist_preds.softmax(3).matmul(
+                self.proj.view([-1, 1])).squeeze(-1)
+            ang_preds = ang_preds.transpose(1, 2).reshape(b, -1, h, w)
+        else:
+            bbox_preds = bbox_dist_preds
+            ang_preds = angle_dist_preds
+        if self.training:
+            return cls_logit, bbox_preds, ang_preds, bbox_dist_preds, angle_dist_preds
+        else:
+            return cls_logit, bbox_preds, ang_preds
+
+    def forward(self, img_feats: Tuple[Tensor]) -> Tuple[List]:
+        assert len(img_feats) == self.num_levels
+        return multi_apply(self.forward_single, img_feats, self.cls_preds,
+                           self.reg_convs, self.reg_preds, self.ang_preds, self.cls_contrasts)
+    
+@MODELS.register_module()
+class YOLOv8RotatedHead(YOLOv8Head):
+    """YOLOv8 Rotated Head
     """
-
     def __init__(self, 
-                # TODO add configs
+                head_module: ConfigType,
+                angle_version: str = 'le90', 
+                use_hbbox_loss: bool = False, 
+                angle_coder: ConfigType = dict(type='mmrotate.PseudoAngleCoder'),
+                loss_angle: OptConfigType = None,
                 *args, **kwargs) -> None:
-        # TODO add init
-        super().__init__(*args, **kwargs)
-        self.num_levels = self.head_module.num_levels
-   
-    def loss(self, img_feats: Tuple[Tensor], txt_feats: Tensor,
-             batch_data_samples: Union[list, dict]) -> dict:
-        """Perform forward propagation and loss calculation of the detection
-        head on the features of the upstream network."""
+        if not MMROTATE_AVAILABLE:
+            raise ImportError(
+                'Please run "mim install -r requirements/mmrotate.txt" '
+                'to install mmrotate first for rotated detection.')
+        self.angle_version = angle_version
+        self.use_hbbox_loss = use_hbbox_loss
+        if self.use_hbbox_loss:
+            assert loss_angle is not None, \
+                ('When use hbbox loss, loss_angle needs to be specified')
+        self.angle_coder = TASK_UTILS.build(angle_coder)
+        self.angle_out_dim = self.angle_coder.encode_size
+        if head_module.get('angle_out_dim') is not None:
+            warnings.warn('angle_out_dim will be overridden by angle_coder '
+                          'and does not need to be set manually')
 
-        outs = self(img_feats[:self.num_levels], txt_feats)
-        # Fast versions
-        loss_inputs = outs + tuple([list(img_feats[self.num_levels:])]) +(batch_data_samples['bboxes_labels'],
-                              batch_data_samples['img_metas'])
-        losses = self.loss_by_feat(*loss_inputs)
-
-        return losses
-    # def get_mask_gt(self, batch_gt_instances: Sequence[InstanceData],
-
-    def predict(self,
-                img_feats: Tuple[Tensor],
-                txt_feats: Tensor,
-                batch_data_samples: SampleList,
-                rescale: bool = False) -> InstanceList:
-        """Perform forward propagation of the detection head and predict
-        detection results on the features of the upstream network.
-        """
-        batch_img_metas = [
-            data_samples.metainfo for data_samples in batch_data_samples
-        ]
-        outs = self(img_feats[:self.num_levels], txt_feats)
-        predictions = self.predict_by_feat(*outs,
-                                           batch_img_metas=batch_img_metas,
-                                           rescale=rescale)
-        return predictions    
-                    
+        head_module['angle_out_dim'] = self.angle_out_dim
+        super().__init__(head_module=head_module, *args, **kwargs)
+        
+        if loss_angle is not None:
+            self.loss_angle = MODELS.build(loss_angle)
+        else:
+            self.loss_angle = None
+        
     def loss_by_feat(
             self,
             cls_scores: Sequence[Tensor],
@@ -987,7 +1044,6 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
             angle_preds: Sequence[Tensor],
             bbox_dist_preds: Sequence[Tensor],
             angle_dist_preds: Sequence[Tensor],
-            attn_preds: Sequence[Tensor],
             batch_gt_instances: Sequence[InstanceData],
             batch_img_metas: Sequence[dict],
             batch_gt_instances_ignore: OptInstanceList = None) -> dict:
@@ -1003,8 +1059,6 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
                 num_priors * 4.
             angle_preds (list[Tensor]): Angle prediction for each scale
                 level with shape (N, num_priors?? * angle_out_dim, H, W).
-            attn_preds (list[Tensor]): Attention prediction for each scale
-                level with shape (N, 1, H, W).
             bbox_dist_preds?? (Sequence[Tensor]): Box distribution logits for
                 each scale level with shape (bs, reg_max + 1, H*W, 4).
             angle_dist_preds?? (Sequence[Tensor]): ??.
@@ -1020,8 +1074,6 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         Returns:
             dict[str, Tensor]: A dictionary of losses.
         """
-        ## TODO: add loss of attn_preds
-        
         num_imgs = len(batch_img_metas)
 
         current_featmap_sizes = [
@@ -1045,20 +1097,20 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         # gt info
         gt_info = gt_instances_preprocess(batch_gt_instances, num_imgs)
         gt_labels = gt_info[:, :, :1]
-        gt_bboxes = gt_info[:, :, 1:]  # xywha [batch, num_pred, 5]
-        pad_bbox_flag = (gt_bboxes.sum(-1, keepdim=True) > 0).float() #num_pred中有pad的
+        gt_bboxes = gt_info[:, :, 1:]  # xywha
+        pad_bbox_flag = (gt_bboxes.sum(-1, keepdim=True) > 0).float()
 
         # pred info
-        flatten_cls_scores = [ # Sequence(Tensor[batch, flatten_featmap_size, num_classes]), len(seq)=num_levels 
+        flatten_cls_scores = [
             cls_score.permute(0, 2, 3, 1).reshape(num_imgs, -1,
                                                  self.num_classes)
             for cls_score in cls_scores
         ]
-        flatten_tblrs = [ # Sequence(Tensor[batch, flatten_featmap_size, 4]), len(seq)=num_levels
+        flatten_tblrs = [
             bbox_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1, 4)
             for bbox_pred in bbox_preds
         ]
-        flatten_angles = [ # Sequence(Tensor[batch, flatten_featmap_size, 1]), len(seq)=num_levels
+        flatten_angles = [
             angle_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1, self.angle_out_dim) 
             for angle_pred in angle_preds
         ]
@@ -1073,14 +1125,14 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         flatten_cls_scores = torch.cat(flatten_cls_scores, dim=1)
         flatten_tblrs = torch.cat(flatten_tblrs, dim=1)
         flatten_tblrs = flatten_tblrs * self.flatten_priors_train[..., -1,
-                                                                  None] # scale to original image size
+                                                                  None]
         flatten_angles = torch.cat(flatten_angles, dim=1)
         flatten_decoded_angle = self.angle_coder.decode(
             flatten_angles, keepdim=True)
         
         flatten_tblra = torch.cat([flatten_tblrs, flatten_decoded_angle],
                                   dim=-1)
-        flatten_rbboxes = distance2obb( # [batch, flatten_featmap_size, 5], obb means (left, top, right, bottom, angle)
+        flatten_rbboxes = distance2obb(
             self.flatten_priors_train[..., :2],
             flatten_tblra,
             angle_version=self.angle_version)
@@ -1121,8 +1173,8 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
 
         if len(pos_inds) > 0:
             loss_bbox = self.loss_bbox(
-                bbox_preds[pos_inds], # [num_foreground, 5]
-                pos_bbox_targets, # [num_foreground, 5]
+                bbox_preds[pos_inds],
+                pos_bbox_targets,
                 weight=assign_metrics[pos_inds],
                 avg_factor=avg_factor)
             loss_angle = angle_preds.sum() * 0
@@ -1137,223 +1189,25 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         else:
             loss_bbox = bbox_preds.sum() * 0
             loss_angle = angle_preds.sum() * 0
+            
+        _, world_size = get_dist_info()
         
-        # cal mask loss
-        
-        mask_gt = self.get_mask_gt(gt_bboxes, self.featmap_sizes_train, self.featmap_strides)
-        loss_mask = self.cal_loss_mask(attn_preds, mask_gt)
-        # loss_mask = 
-        
-        # ?? world_size, num_imgs
-        if self.world_size == -1:
-            _, world_size = get_dist_info()
-        else:
-            world_size = self.world_size
-        # ?? why *num_imgs * world_size
-        # ! 因为这个框架采用了学习率 自动缩放，在算步长的时候会 除以 (num_gpu * batch_per_gpu)， 因此每一个loss都要乘以这个值
         losses = dict()
         losses['loss_cls'] = loss_cls * num_imgs * world_size
         losses['loss_bbox'] = loss_bbox * num_imgs * world_size
         if self.loss_angle is not None:
             losses['loss_angle'] = loss_angle * num_imgs * world_size
-        losses['loss_mask'] = loss_mask * num_imgs * world_size
         
         return losses
         # return dict(
         #     loss_cls=loss_cls * num_imgs * world_size,
         #     loss_bbox=loss_bbox * num_imgs * world_size,
         #     loss_dfl=loss_dfl * num_imgs * world_size)
-    
-    def get_mask_gt(self, gt_bboxes, featmap_sizes, featmap_strides):
-        '''
-        intput:
-        gt_bboxes: [batch, num_pred, 5], 5 means (cx, cy, w, h, a), a \in [-pi/2, pi/2]
-        featmap_sizes: Sequence[tensor[H, W]], len(seq)=num_levels
-        featmap_strides: Sequence[tensor[int]], len(seq)=num_levels
-        
-        output:
-        mask_gt: list([batch, 1, H, W]), len(seq)=num_levels
-        
-        将gt_bboxes转成实例分割的mask，输出的mask的大小为[H, W]，如果特征图上的点对应有物体，则mask上的点为1，否则为0
-        '''
-        batch_size, num_pred, _ = gt_bboxes.shape
-        device = gt_bboxes.device
-        num_levels = len(featmap_sizes)
-        
-        mask_gt = []
-        
-        for level, (featmap_size, stride) in enumerate(zip(featmap_sizes, featmap_strides)):
-            H, W = featmap_size
-            mask_level = torch.zeros((batch_size, 1, H, W), device=device, dtype=torch.uint8)
-            scale_factor = torch.tensor([1/stride, 1/stride, 1/stride, 1/stride, 1], device=device)
-            scaled_bboxes = gt_bboxes * scale_factor[None, None, :]
-            
-            for b in range(batch_size):
-                for n in range(num_pred):
-                    x, y, w, h, angle = scaled_bboxes[b, n].cpu().numpy()
-                    
-                    angle_deg = np.degrees(angle)
-                    
-                    rect = ((x, y), (w, h), angle_deg)
-                    box = cv2.boxPoints(rect)
-                    
-                    box = np.intp(box)  # 改用 np.intp
-                    
-                    mask = np.zeros((H, W), dtype=np.uint8)
-                    cv2.fillPoly(mask, [box], 1)
-                    
-                    mask_level[b, 0] = mask_level[b, 0] | torch.from_numpy(mask).to(device)
-            mask_gt.append(mask_level)
 
-        mask_gt = [mask.float() for mask in mask_gt]
-        return mask_gt
-
-    def cal_loss_mask(self, attn_preds, mask_gt):
-        '''
-        计算mask loss, 使用二元交叉熵损失(BCE loss)
-        
-        input:
-        attn_preds: list([batch, 1, H, W]), len(list)=num_levels
-        mask_gt: list([batch, 1, H, W]), len(list)=num_levels
-        
-        output:
-        loss_mask: tensor[1]
-        '''
-        num_levels = len(attn_preds)
-        device = attn_preds[0].device
-        total_loss = torch.tensor(0., device=device)
-        
-        for level in range(num_levels):
-            pred = attn_preds[level]
-            target = mask_gt[level]
-            
-            assert pred.shape[2:] == target.shape[2:]
-            target = target.sum(dim=1, keepdim=True).clamp(0, 1) # 这个不需要
-            
-            loss = F.binary_cross_entropy(pred, target, reduction='mean')
-            
-            total_loss += loss
-        
-        avg_loss = total_loss / num_levels
-        return avg_loss
-
-@MODELS.register_module()
-class YOLOWorldRotatedHeadModuleSPInfer(YOLOWorldRotatedHeadModule):
-    """Sparse Head Module for YOLO-World (DOTA, rotated)
-    """
-
-    def __init__(self,
-                 sp_type: str = "vspconv",
-                 is_sparse_levels: List[int] = [1,1,0],
-                 *args,
-                 **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.is_sparse_levels = is_sparse_levels
-        self.sp_type = sp_type
-        self.sparse_module_name = ['cls_preds', 'reg_convs', 'reg_preds', 'ang_preds']
-        self.sparse_module_list = [getattr(self, name) for name in self.sparse_module_name]
-        
-    def forward(self, img_feats: Tuple[Tensor],
-                img_attns: Tuple[Tensor],
-                txt_feats: Tensor) -> Tuple[List]:
-        """Forward features from the upstream network."""
-        assert len(img_feats) == self.num_levels
-        txt_feats = [txt_feats for _ in range(self.num_levels)]
-        
-        # sp_infer = SPInfer(self.sp_type)
-        # for idx, is_sparse in enumerate(self.is_sparse_levels):
-        #     if is_sparse:
-        #         for m in self.sparse_module_list:
-        #             sp_infer._replace_spinfer(str(idx), m[idx], m)
-
-        return multi_apply(self.forward_single, img_feats, img_attns, txt_feats, self.is_sparse_levels,
-                           self.cls_preds, self.reg_convs, self.reg_preds, self.ang_preds, self.cls_contrasts)
-
-    def forward_single(self, img_feat: Tensor, img_attn: Tensor, txt_feat: Tensor,
-                       is_sparse: bool,
-                       cls_pred: nn.ModuleList, reg_conv: nn.ModuleList, 
-                       reg_pred: nn.ModuleList, ang_pred: nn.ModuleList,
-                       cls_contrast: nn.ModuleList) -> Tuple:
-        """Forward feature of a single scale level."""
-        b, _, h, w = img_feat.shape
-        # img_feat = _make_indice_tensor(img_feat, img_attn, ishead=True)
-        if is_sparse:
-            img_feat = _make_sparse_tensor(img_feat, img_attn)
-            cls_embed = cls_pred(img_feat).dense(channels_first=True)
-            cls_logit = cls_contrast(cls_embed, txt_feat)
-            bbox_dist_preds = reg_pred(reg_conv(img_feat)).dense(channels_first=True)
-            angle_dist_preds = ang_pred(reg_conv(img_feat)).dense(channels_first=True)
-        else:
-            cls_embed = cls_pred(img_feat)
-            cls_logit = cls_contrast(cls_embed, txt_feat)
-            bbox_dist_preds = reg_pred(reg_conv(img_feat))
-            angle_dist_preds = ang_pred(reg_conv(img_feat))
-        if self.reg_max > 1:
-            bbox_dist_preds = bbox_dist_preds.reshape(
-                [-1, 4, self.reg_max, h * w]).permute(0, 3, 1, 2)
-            angle_dist_preds = angle_dist_preds.reshape(
-                [-1, 1, self.reg_max, h * w]).permute(0, 3, 1, 2)
-            # TODO: The get_flops script cannot handle the situation of
-            #  matmul, and needs to be fixed later
-            # bbox_preds = bbox_dist_preds.softmax(3).matmul(self.proj)
-            bbox_preds = bbox_dist_preds.softmax(3).matmul(
-                self.proj.view([-1, 1])).squeeze(-1)
-            bbox_preds = bbox_preds.transpose(1, 2).reshape(b, -1, h, w)
-            ang_preds = angle_dist_preds.softmax(3).matmul(
-                self.proj.view([-1, 1])).squeeze(-1)
-            ang_preds = ang_preds.transpose(1, 2).reshape(b, -1, h, w)
-        else:
-            bbox_preds = bbox_dist_preds
-            ang_preds = angle_dist_preds
-        if self.training:
-            return cls_logit, bbox_preds, ang_preds, bbox_dist_preds, angle_dist_preds
-        else:
-            if is_sparse:
-                featmap_sizes = cls_logit.shape[2:]
-                inds = (img_attn[:,1] * featmap_sizes[0] + img_attn[:,2]).long()
-                return cls_logit.permute(0, 2, 3, 1).reshape(-1, self.num_classes)[inds], bbox_preds.permute(0, 2, 3, 1).reshape(-1, 4)[inds], ang_preds.permute(0, 2, 3, 1).reshape(-1, self.angle_out_dim)[inds], featmap_sizes, inds
-            else:
-                featmap_sizes = cls_logit.shape[2:]
-                return cls_logit.permute(0, 2, 3, 1).reshape(-1, self.num_classes), bbox_preds.permute(0, 2, 3, 1).reshape(-1, 4), ang_preds.permute(0, 2, 3, 1).reshape(-1, self.angle_out_dim), featmap_sizes, None
-
-@MODELS.register_module()
-class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
-    """YOLO-World Head
-    """
-    def __init__(self, 
-                *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.num_levels = self.head_module.num_levels
-        self.sp_module = ['head_module']
-    
-    def predict(self,
-                img_feats: Tuple[Tensor],
-                txt_feats: Tensor,
-                batch_data_samples: SampleList,
-                rescale: bool = False) -> InstanceList:
-        """Perform forward propagation of the detection head and predict
-        detection results on the features of the upstream network.
-        """
-        batch_img_metas = [
-            data_samples.metainfo for data_samples in batch_data_samples
-        ]
-        outs = self(img_feats, txt_feats)
-        predictions = self.predict_by_feat(*outs,
-                                           batch_img_metas=batch_img_metas,
-                                           rescale=rescale)
-        return predictions
-    
-    def forward(self, img_feats: Tuple[Tensor],
-                txt_feats: Tensor) -> Tuple[List]:
-        """Forward features from the upstream network."""
-        return self.head_module(img_feats[:self.num_levels], img_feats[self.num_levels:], txt_feats)
-    
     def predict_by_feat(self,
                         cls_scores: List[Tensor],
                         bbox_preds: List[Tensor],
                         angle_preds: List[Tensor],
-                        featmap_sizes: List[Tensor],
-                        featmap_inds: List[Tensor],
                         objectnesses: Optional[List[Tensor]] = None,
                         batch_img_metas: Optional[List[dict]] = None,
                         cfg: Optional[ConfigDict] = None,
@@ -1414,7 +1268,7 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
         decode_with_angle = cfg.get('decode_with_angle', True)
         
         num_imgs = len(batch_img_metas)
-        # featmap_sizes = [cls_score.shape[2:] for cls_score in cls_scores]
+        featmap_sizes = [cls_score.shape[2:] for cls_score in cls_scores]
 
         # If the shape does not change, use the previous mlvl_priors
         if featmap_sizes != self.featmap_sizes:
@@ -1423,32 +1277,28 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
                 dtype=cls_scores[0].dtype,
                 device=cls_scores[0].device)
             self.featmap_sizes = featmap_sizes
-        # flatten_priors = torch.cat(self.mlvl_priors)
-        flatten_priors = torch.cat([self.mlvl_priors[i] if inds is None else self.mlvl_priors[i][inds] for i, inds in enumerate(featmap_inds)])
+        flatten_priors = torch.cat(self.mlvl_priors)
 
-        # mlvl_strides = [
-        #     flatten_priors.new_full(
-        #         (featmap_size.numel() * self.num_base_priors, ), stride) for
-        #     featmap_size, stride in zip(featmap_sizes, self.featmap_strides)
-        # ]
         mlvl_strides = [
             flatten_priors.new_full(
-                ((featmap_size.numel() if inds is None else len(inds)) * self.num_base_priors, ), stride) 
-            for featmap_size, inds, stride in zip(featmap_sizes, featmap_inds, self.featmap_strides)
+                (featmap_size.numel() * self.num_base_priors, ), stride) for
+            featmap_size, stride in zip(featmap_sizes, self.featmap_strides)
         ]
         flatten_stride = torch.cat(mlvl_strides)
 
         # flatten cls_scores, bbox_preds and objectness
         flatten_cls_scores = [
-            cls_score.reshape(num_imgs, -1, self.num_classes)
+            cls_score.permute(0, 2, 3, 1).reshape(num_imgs, -1,
+                                                  self.num_classes)
             for cls_score in cls_scores
         ]
         flatten_bbox_preds = [
-            bbox_pred.reshape(num_imgs, -1, 4)
+            bbox_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1, 4)
             for bbox_pred in bbox_preds
         ]
         flatten_angle_preds = [
-            angle_pred.reshape(num_imgs, -1, self.angle_out_dim)
+            angle_pred.permute(0, 2, 3, 1).reshape(num_imgs, -1,
+                                                   self.angle_out_dim)
             for angle_pred in angle_preds
         ]
         
@@ -1556,3 +1406,146 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
 
             results_list.append(results)
         return results_list
+
+@MODELS.register_module()
+class YOLOv8RotatedHeadModule(YOLOv8HeadModule):
+    """Head Module for YOLOv8 (DOTA, rotated)
+
+    Args:
+        angle_out_dim (int): angle dimension for the angle head in rotated boxes prediction, default: 1
+    """
+
+    def __init__(self,
+                 *args,
+                 freeze_all: bool = False,
+                 angle_out_dim: int = 1,
+                 **kwargs) -> None:
+        self.freeze_all = freeze_all
+        self.angle_out_dim = angle_out_dim
+        super().__init__(*args, **kwargs)
+
+    def init_weights(self, prior_prob=0.01):
+        """Initialize the weight and bias of PPYOLOE head."""
+        # super().init_weights()
+        for ang_pred, reg_pred, cls_pred, stride in zip(self.ang_preds, self.reg_preds, self.cls_preds,
+                                              self.featmap_strides):
+            normal_init(ang_pred, std=0.01)
+            normal_init(reg_pred, std=0.01)
+            cls_pred[-1].bias.data[:self.num_classes] = math.log(
+                5 / self.num_classes / (1024 / stride)**2)
+            
+    def _init_layers(self) -> None:
+        """initialize conv layers in YOLOv8 head."""
+        # Init decouple head
+        self.cls_preds = nn.ModuleList()
+        self.reg_convs = nn.ModuleList()
+        self.reg_preds = nn.ModuleList()
+        self.ang_preds = nn.ModuleList()
+        reg_out_channels = max(
+            (16, self.in_channels[0] // 4, self.reg_max * 4))
+        cls_out_channels = max(self.in_channels[0], self.num_classes)
+
+        for i in range(self.num_levels):
+            self.reg_convs.append(
+                nn.Sequential(
+                    ConvModule(in_channels=self.in_channels[i],
+                               out_channels=reg_out_channels,
+                               kernel_size=3,
+                               stride=1,
+                               padding=1,
+                               norm_cfg=self.norm_cfg,
+                               act_cfg=self.act_cfg),
+                    ConvModule(in_channels=reg_out_channels,
+                               out_channels=reg_out_channels,
+                               kernel_size=3,
+                               stride=1,
+                               padding=1,
+                               norm_cfg=self.norm_cfg,
+                               act_cfg=self.act_cfg)))
+            self.ang_preds.append(
+                nn.Conv2d(
+                    in_channels=reg_out_channels,
+                    out_channels=self.angle_out_dim * self.reg_max,
+                    kernel_size=1))
+            self.reg_preds.append(
+                    nn.Conv2d(
+                        in_channels=reg_out_channels,
+                        out_channels=4 * self.reg_max,
+                        kernel_size=1))
+            self.cls_preds.append(
+                nn.Sequential(
+                    ConvModule(
+                        in_channels=self.in_channels[i],
+                        out_channels=cls_out_channels,
+                        kernel_size=3,
+                        stride=1,
+                        padding=1,
+                        norm_cfg=self.norm_cfg,
+                        act_cfg=self.act_cfg),
+                    ConvModule(
+                        in_channels=cls_out_channels,
+                        out_channels=cls_out_channels,
+                        kernel_size=3,
+                        stride=1,
+                        padding=1,
+                        norm_cfg=self.norm_cfg,
+                        act_cfg=self.act_cfg),
+                    nn.Conv2d(
+                        in_channels=cls_out_channels,
+                        out_channels=self.num_classes,
+                        kernel_size=1)))
+
+        proj = torch.arange(self.reg_max, dtype=torch.float)
+        self.register_buffer('proj', proj, persistent=False)
+
+        if self.freeze_all:
+            self._freeze_all()
+
+    def _freeze_all(self):
+        """Freeze the model."""
+        for m in self.modules():
+            if isinstance(m, _BatchNorm):
+                m.eval()
+            for param in m.parameters():
+                param.requires_grad = False
+
+    def train(self, mode=True):
+        super().train(mode)
+        if self.freeze_all:
+            self._freeze_all()
+
+    def forward(self, img_feats: Tuple[Tensor]) -> Tuple[List]:
+        """Forward features from the upstream network."""
+        assert len(img_feats) == self.num_levels
+        return multi_apply(self.forward_single, img_feats,
+                           self.cls_preds, self.reg_convs, self.reg_preds, self.ang_preds)
+
+    def forward_single(self, img_feat: Tensor,
+                       cls_pred: nn.ModuleList, reg_conv: nn.ModuleList, 
+                       reg_pred: nn.ModuleList, ang_pred: nn.ModuleList) -> Tuple:
+        """Forward feature of a single scale level."""
+        b, _, h, w = img_feat.shape
+        cls_logit = cls_pred(img_feat)
+        bbox_dist_preds = reg_pred(reg_conv(img_feat))
+        angle_dist_preds = ang_pred(reg_conv(img_feat))
+        if self.reg_max > 1:
+            bbox_dist_preds = bbox_dist_preds.reshape(
+                [-1, 4, self.reg_max, h * w]).permute(0, 3, 1, 2)
+            angle_dist_preds = angle_dist_preds.reshape(
+                [-1, 1, self.reg_max, h * w]).permute(0, 3, 1, 2)
+            # TODO: The get_flops script cannot handle the situation of
+            #  matmul, and needs to be fixed later
+            # bbox_preds = bbox_dist_preds.softmax(3).matmul(self.proj)
+            bbox_preds = bbox_dist_preds.softmax(3).matmul(
+                self.proj.view([-1, 1])).squeeze(-1)
+            bbox_preds = bbox_preds.transpose(1, 2).reshape(b, -1, h, w)
+            ang_preds = angle_dist_preds.softmax(3).matmul(
+                self.proj.view([-1, 1])).squeeze(-1)
+            ang_preds = ang_preds.transpose(1, 2).reshape(b, -1, h, w)
+        else:
+            bbox_preds = bbox_dist_preds
+            ang_preds = angle_dist_preds
+        if self.training:
+            return cls_logit, bbox_preds, ang_preds, bbox_dist_preds, angle_dist_preds
+        else:
+            return cls_logit, bbox_preds, ang_preds

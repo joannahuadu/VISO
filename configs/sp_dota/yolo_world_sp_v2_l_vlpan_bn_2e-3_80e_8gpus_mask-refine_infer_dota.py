@@ -4,16 +4,16 @@ _base_ = (
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
-is_sparse_levels = [1,0,0]
+is_sparse_levels = [1,1,1]
 
-load_from = "/mnt/data1/workspace/wmq/YOLO-World/work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_67.pth"
+load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_67.pth"
 
 # model settings
 model = dict(
     neck=dict(type='YOLOWorldPAFPNSPInfer',
               block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConvSPInfer', sp_type="vspconv"),
               is_sparse_levels = is_sparse_levels,
-              score_th=0.001,
+              score_th=0.01,
             #   reduce_embed_channels=neck_reduce_embed_channels,
             #   downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),
               reduce_num_heads=neck_reduce_num_heads,
