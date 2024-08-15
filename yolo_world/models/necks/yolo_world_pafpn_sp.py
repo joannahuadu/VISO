@@ -233,7 +233,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         for idx in range(len(self.in_channels)):
             x, attn = self.reduce_layers[idx](img_feats[idx], txt_feats)
             if self.is_split_attn:
-                attn = attn.max(dim=-1)[0]
+                attn = attn.max(dim=-1)[0].unsqueeze(1)
             reduce_outs.append((x, attn))
         if self.mask_vis:
             mask_visulize([attn_weight for _, attn_weight in reduce_outs])
