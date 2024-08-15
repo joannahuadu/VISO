@@ -44,10 +44,12 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
 
     def __init__(self, 
                 # TODO add configs
+                is_split_attn: bool = False,
                 *args, **kwargs) -> None:
         # TODO add init
         super().__init__(*args, **kwargs)
         self.num_levels = self.head_module.num_levels
+        self.is_split_attn = is_split_attn
    
     def loss(self, img_feats: Tuple[Tensor], txt_feats: Tensor,
              batch_data_samples: Union[list, dict]) -> dict:
@@ -239,11 +241,9 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
             loss_angle = angle_preds.sum() * 0
         
         # cal mask loss
-        
-        mask_gt = self.get_mask_gt(gt_bboxes, self.featmap_sizes_train, self.featmap_strides)
-        loss_mask = self.cal_loss_mask(attn_preds, mask_gt)
-        # loss_mask = 
-        
+        mask_gt = self.get_mask_gt(gt_bboxes, gt_labels, self.featmap_sizes_train, self.featmap_strides, self.is_split_attn, self.num_classes)
+        loss_mask = self.cal_loss_mask(attn_preds, mask_gt, self.is_split_attn, self.num_classes)
+            
         # ?? world_size, num_imgs
         if self.world_size == -1:
             _, world_size = get_dist_info()
@@ -264,17 +264,21 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         #     loss_bbox=loss_bbox * num_imgs * world_size,
         #     loss_dfl=loss_dfl * num_imgs * world_size)
     
-    def get_mask_gt(self, gt_bboxes, featmap_sizes, featmap_strides):
+    def get_mask_gt(self, gt_bboxes, gt_labels, featmap_sizes, featmap_strides, is_split_attn, num_classes):
         '''
-        intput:
-        gt_bboxes: [batch, num_pred, 5], 5 means (cx, cy, w, h, a), a \in [-pi/2, pi/2]
-        featmap_sizes: Sequence[tensor[H, W]], len(seq)=num_levels
-        featmap_strides: Sequence[tensor[int]], len(seq)=num_levels
-        
-        output:
-        mask_gt: list([batch, 1, H, W]), len(seq)=num_levels
-        
-        将gt_bboxes转成实例分割的mask，输出的mask的大小为[H, W]，如果特征图上的点对应有物体，则mask上的点为1，否则为0
+        将gt_bboxes转成实例分割的mask，输出的mask的大小为[num_words, H, W]，如果特征图上的点对应有物体，则对应word的mask上的点为1，否则为0
+        Args
+            gt_bboxes: [batch, num_pred, 5], 5 means (cx, cy, w, h, a), a \in [-pi/2, pi/2]
+            gt_labels: [batch, num_pred, 1], 1 means class id
+            featmap_sizes: Sequence[tensor[H, W]], len(seq)=num_levels
+            featmap_strides: Sequence[tensor[int]], len(seq)=num_levels
+            is_split_attn: bool, 决定gt类型
+            num_classes: int, 类别数
+        Returns:
+            mask_gt:
+                if is_split_attn=False, list([batch, 1, H, W]), len(seq)=num_levels
+                if is_split_attn=True, list([batch, num_words, H, W]), len(seq)=num_levels
+            
         '''
         batch_size, num_pred, _ = gt_bboxes.shape
         device = gt_bboxes.device
@@ -284,41 +288,57 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         
         for level, (featmap_size, stride) in enumerate(zip(featmap_sizes, featmap_strides)):
             H, W = featmap_size
-            mask_level = torch.zeros((batch_size, 1, H, W), device=device, dtype=torch.uint8)
+            if is_split_attn:
+                mask_level = torch.zeros((batch_size, num_classes, H, W), device=device, dtype=torch.uint8)
+            else:
+                mask_level = torch.zeros((batch_size, 1, H, W), device=device, dtype=torch.uint8)
+            
             scale_factor = torch.tensor([1/stride, 1/stride, 1/stride, 1/stride, 1], device=device)
             scaled_bboxes = gt_bboxes * scale_factor[None, None, :]
             
             for b in range(batch_size):
                 for n in range(num_pred):
                     x, y, w, h, angle = scaled_bboxes[b, n].cpu().numpy()
-                    
+                    class_id = gt_labels[b, n].item()
+                    class_id = int(round(class_id))
                     angle_deg = np.degrees(angle)
                     
                     rect = ((x, y), (w, h), angle_deg)
                     box = cv2.boxPoints(rect)
                     
-                    box = np.intp(box)  # 改用 np.intp
+                    box = np.intp(box)
                     
                     mask = np.zeros((H, W), dtype=np.uint8)
                     cv2.fillPoly(mask, [box], 1)
                     
-                    mask_level[b, 0] = mask_level[b, 0] | torch.from_numpy(mask).to(device)
+                    if is_split_attn:
+                        mask_level[b, class_id] = mask_level[b, class_id] | torch.from_numpy(mask).to(device)
+                    else:
+                        mask_level[b, 0] = mask_level[b, 0] | torch.from_numpy(mask).to(device)
+            
             mask_gt.append(mask_level)
 
         mask_gt = [mask.float() for mask in mask_gt]
         return mask_gt
 
-    def cal_loss_mask(self, attn_preds, mask_gt):
+    def cal_loss_mask(self, attn_preds, mask_gt, is_split_attn, num_classes):
         '''
         计算mask loss, 使用二元交叉熵损失(BCE loss)
         
         input:
-        attn_preds: list([batch, 1, H, W]), len(list)=num_levels
-        mask_gt: list([batch, 1, H, W]), len(list)=num_levels
+        attn_preds: 
+            if is_split_attn=False, list([batch, 1, H, W]), len(list)=num_levels
+            if is_split_attn=True, list([batch, H, W, num_words]), len(list)=num_levels
+        mask_gt: 
+            if is_split_attn=False, list([batch, 1, H, W]), len(list)=num_levels
+            if is_split_attn=True, list([batch, num_words, H, W]), len(list)=num_levels
+        is_split_attn: bool
+        num_classes: int
         
         output:
         loss_mask: tensor[1]
         '''
+        attn_preds = [attn_pred.permute(0, 3, 1, 2) for attn_pred in attn_preds]
         num_levels = len(attn_preds)
         device = attn_preds[0].device
         total_loss = torch.tensor(0., device=device)
@@ -327,15 +347,28 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
             pred = attn_preds[level]
             target = mask_gt[level]
             
-            assert pred.shape[2:] == target.shape[2:]
-            target = target.sum(dim=1, keepdim=True).clamp(0, 1) # 这个不需要
+            assert pred.shape == target.shape, f"Shape mismatch at level {level}: pred {pred.shape}, target {target.shape}"
             
-            loss = F.binary_cross_entropy(pred, target, reduction='mean')
-            
-            total_loss += loss
+            if is_split_attn:
+                # 对于每个类别分别计算损失
+                for class_id in range(num_classes):
+                    pred_class = pred[:, class_id:class_id+1, :, :]
+                    target_class = target[:, class_id:class_id+1, :, :]
+                    
+                    loss = F.binary_cross_entropy(pred_class, target_class, reduction='mean')
+                    total_loss += loss
+            else:
+                # 原来的逻辑，但移除了不必要的 target 处理
+                loss = F.binary_cross_entropy(pred, target, reduction='mean')
+                total_loss += loss
         
-        avg_loss = total_loss / num_levels
+        if is_split_attn:
+            avg_loss = total_loss / (num_levels * num_classes)
+        else:
+            avg_loss = total_loss / num_levels
+        
         return avg_loss
+
 
 @MODELS.register_module()
 class YOLOWorldRotatedHeadModuleSPInfer(YOLOWorldRotatedHeadModule):

@@ -129,6 +129,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
     def __init__(self,
                  reduce_num_heads: List[int],
                  reduce_block_cfg: ConfigType = dict(type='KnowledgeAttnBlock'),
+                 is_split_attn: bool = False,
                  is_sparse_levels: List[int] = [1,1,0],
                  mask_vis: bool = False,
                  score_th: float = 0.501,
@@ -143,6 +144,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         self.score_th = score_th
         self.sp_module = ['top_down_layers', 'bottom_up_layers']
         self.mask_vis = mask_vis
+        self.is_split_attn = is_split_attn
 
     def build_top_down_layer(self, idx: int) -> nn.Module:
         """build top down layer.
@@ -229,7 +231,10 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         # reduce layers
         reduce_outs = []
         for idx in range(len(self.in_channels)):
-            reduce_outs.append(self.reduce_layers[idx](img_feats[idx], txt_feats))
+            x, attn = self.reduce_layers[idx](img_feats[idx], txt_feats)
+            if self.is_split_attn:
+                attn = attn.max(dim=-1)[0].unsqueeze(1)
+            reduce_outs.append((x, attn))
         if self.mask_vis:
             mask_visulize([attn_weight for _, attn_weight in reduce_outs])
             featuremap_visulize([feature_value for feature_value, _ in reduce_outs])
