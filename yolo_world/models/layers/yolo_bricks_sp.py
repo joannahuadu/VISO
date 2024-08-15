@@ -473,7 +473,11 @@ class TextKnowledgeAttnBlock(KnowledgeAttnBlock):
             guide = guide.permute(0, 2, 3, 1)
             attn_weight = torch.matmul(embed, guide)
             attn_weight = attn_weight.reshape(batch, m, height, width, n)
-
-        attn_weight = attn_weight[0]
+        
+        assert self.num_heads == 1
+        attn_weight = attn_weight.squeeze(1)
+        attn_weight = attn_weight / (self.head_channels**0.5)
+        attn_weight = attn_weight + self.bias[None, :, None, None]
+        attn_weight = attn_weight.sigmoid() * self.scale
 
         return x, attn_weight
