@@ -6,11 +6,11 @@ _base_ = (
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
 num_classes = 1
-load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val_split/best_dota_mAP_epoch_16.pth"
+load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_67.pth"
 embedding_path = "tools/embeddings/dota_v1_class_texts_zeroshot_fmow_storage_tank_embedding.npy"
 
 # model settings
-model = dict(type='SimpleYOLOWorldDetectorSP',
+model = dict(type='SimpleYOLOWorldDetector',
     mm_neck=True,
     num_train_classes=_base_.num_training_classes,
     num_test_classes=num_classes,
@@ -23,8 +23,7 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
               is_sparse_levels=is_sparse_levels,
               score_th=0.4,
               reduce_num_heads=neck_reduce_num_heads,
-              reduce_block_cfg=dict(type='TextKnowledgeAttnBlock'),
-              is_split_attn=True,),
+              reduce_block_cfg=dict(type='KnowledgeAttnBlock')),
     bbox_head=dict(type='YOLOWorldRotatedHeadSPInfer',
                   head_module=dict(type='YOLOWorldRotatedHeadModuleSPInfer',
                                   sp_type="vspconv",

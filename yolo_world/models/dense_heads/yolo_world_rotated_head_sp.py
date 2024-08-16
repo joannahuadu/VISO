@@ -338,7 +338,8 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         output:
         loss_mask: tensor[1]
         '''
-        attn_preds = [attn_pred.permute(0, 3, 1, 2) for attn_pred in attn_preds]
+        if is_split_attn:
+            attn_preds = [attn_pred.permute(0, 3, 1, 2) for attn_pred in attn_preds]
         num_levels = len(attn_preds)
         device = attn_preds[0].device
         total_loss = torch.tensor(0., device=device)

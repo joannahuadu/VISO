@@ -228,25 +228,19 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         including multi-level image features, text features: BxLxD
         """
         assert len(img_feats) == len(self.in_channels)
-        # visualize mask的每一个维度，放在同一个图里
-        if self.is_split_attn:
-            masks_all_levels = []
-            for idx in range(len(self.in_channels)):
-                x, attn = self.reduce_layers[idx](img_feats[idx], txt_feats)
-                # [B, H, W, num_words] -> [B, num_words, H, W]
-                attn = attn.permute(0, 3, 1, 2)
-                masks_all_levels.append(attn)
-            mask_visulize(masks_all_levels)
-                
                 
         # reduce layers
         reduce_outs = []
+        masks_all_levels = []
         for idx in range(len(self.in_channels)):
             x, attn = self.reduce_layers[idx](img_feats[idx], txt_feats)
             if self.is_split_attn:
+                masks_all_levels.append(attn.permute(0, 3, 1, 2))
                 attn = attn.max(dim=-1)[0].unsqueeze(1)
             reduce_outs.append((x, attn))
         if self.mask_vis:
+            if self.is_split_attn:
+                mask_visulize(masks_all_levels)
             mask_visulize([attn_weight for _, attn_weight in reduce_outs])
             featuremap_visulize([feature_value for feature_value, _ in reduce_outs])
             
