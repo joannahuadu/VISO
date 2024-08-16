@@ -40,15 +40,9 @@ val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
 
-_base_.model.neck.mask_vis = True # 如果要可视化特征图的话，要用这个，否则只会可视化目标检测结果框
-
 custom_hooks = [
     dict(
         type='SPHook',
     ),
-    dict(type='yolo_world.RunnerHook'),
-    dict(type='yolo_world.BatchIdxHook'),
-]
 
-default_hooks = dict(
-    visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook', draw=True)) 
+]
