@@ -15,4 +15,5 @@ default_hooks = dict(
 custom_hooks = [ # 加这两个Hook，才能够在推理的时候把mask画出来
     dict(type='yolo_world.RunnerHook'),
     dict(type='yolo_world.BatchIdxHook'),
+    
 ]
