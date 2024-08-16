@@ -12,7 +12,7 @@ _base_.model.neck.mask_vis = True
 default_hooks = dict(
     visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook', draw=True)) 
 class_text_path='data/texts/dota_v1_class_texts.json'
-custom_hooks = [ # 加这两个Hook，才能够在推理的时候把mask画出来
+custom_hooks = [ # 加这3个Hook，才能够在推理的时候把mask画出来
     dict(type='yolo_world.RunnerHook'),
     dict(type='yolo_world.BatchIdxHook'),
     dict(type='yolo_world.ClassTextsHook', # 画图时需要知道有哪儿些文本，这个hook提供

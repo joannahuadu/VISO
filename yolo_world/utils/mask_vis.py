@@ -54,7 +54,7 @@ def mask_visulize(masks):
         canvas = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
         
         for word_idx in range(num_words):
-            # 添加文字
+            # 添加文字``
             text_img = np.zeros((max_size, max_size, 3), dtype=np.uint8)
             cv2.putText(text_img, class_texts[word_idx], (10, max_size // 2),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
