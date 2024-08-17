@@ -228,14 +228,19 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
         including multi-level image features, text features: BxLxD
         """
         assert len(img_feats) == len(self.in_channels)
+                
         # reduce layers
         reduce_outs = []
+        masks_all_levels = []
         for idx in range(len(self.in_channels)):
             x, attn = self.reduce_layers[idx](img_feats[idx], txt_feats)
             if self.is_split_attn:
-                attn = attn.max(dim=-1)[0]
+                masks_all_levels.append(attn.permute(0, 3, 1, 2))
+                attn = attn.max(dim=-1)[0].unsqueeze(1)
             reduce_outs.append((x, attn))
         if self.mask_vis:
+            if self.is_split_attn:
+                mask_visulize(masks_all_levels)
             mask_visulize([attn_weight for _, attn_weight in reduce_outs])
             featuremap_visulize([feature_value for feature_value, _ in reduce_outs])
             
@@ -263,7 +268,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
             else:
                 top_down_layer_inputs, inner_attn = _concat(feat_low, upsample_feat, self.is_sparse_levels[idx - 1])
                 # top_down_layer_inputs = torch.cat([feat_low, upsample_feat], 1)
-            if inner_attn.shape[0] == 0:
+            if inner_attn.shape[0] == 0 and self.is_sparse_levels[idx - 1]==1:
                 return None
             inner_out = self.top_down_layers[len(self.in_channels) - 1 - idx](
                 top_down_layer_inputs, txt_feats)
@@ -282,7 +287,7 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
             feat_high = _make_indice_tensor(inner_outs[idx + 1], inner_attns[idx + 1])
             downsample_feat = _make_indice_tensor(self.downsample_layers[idx](feat_low), out_attn, project='down')
             bottom_up_layer_inputs, out_attn = _concat(downsample_feat, feat_high, self.is_sparse_levels[idx + 1])
-            if out_attn.shape[0] == 0:
+            if out_attn.shape[0] == 0 and self.is_sparse_levels[idx + 1]==1:
                 return None
             out = self.bottom_up_layers[idx](bottom_up_layer_inputs, txt_feats)
             if self.is_sparse_levels[idx + 1]:

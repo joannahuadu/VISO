@@ -4,13 +4,13 @@ _base_ = (
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
-is_sparse_levels = [1,1,1]
+is_sparse_levels = [0,0,0]
 num_classes = 1
-load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_67.pth"
-embedding_path = "tools/embeddings/dota_v1_class_texts_helicopter_embedding.npy"
+load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val_split/best_dota_mAP_epoch_16.pth"
+embedding_path = "tools/embeddings/dota_v1_class_texts_zeroshot_fmow_storage_tank_embedding.npy"
 
 # model settings
-model = dict(type='SimpleYOLOWorldDetector',
+model = dict(type='SimpleYOLOWorldDetectorSP',
     mm_neck=True,
     num_train_classes=_base_.num_training_classes,
     num_test_classes=num_classes,
@@ -21,11 +21,10 @@ model = dict(type='SimpleYOLOWorldDetector',
     neck=dict(type='YOLOWorldPAFPNSPInfer',
               block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConvSPInfer', sp_type="vspconv"),
               is_sparse_levels=is_sparse_levels,
-              score_th=0.2,
-            #   reduce_embed_channels=neck_reduce_embed_channels,
-            #   downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),
+              score_th=0.4,
               reduce_num_heads=neck_reduce_num_heads,
-              reduce_block_cfg=dict(type='KnowledgeAttnBlock')),
+              reduce_block_cfg=dict(type='TextKnowledgeAttnBlock'),
+              is_split_attn=True,),
     bbox_head=dict(type='YOLOWorldRotatedHeadSPInfer',
                   head_module=dict(type='YOLOWorldRotatedHeadModuleSPInfer',
                                   sp_type="vspconv",
@@ -35,10 +34,12 @@ model = dict(type='SimpleYOLOWorldDetector',
 
 dota_val_dataset = dict(
     dataset=dict(
-        ann_file='val/annfiles/',
-        data_prefix=dict(img_path='val/images/'),
+        img_suffix='jpg',
+        data_root='data/split_fMoW_1024/',
+        ann_file='val/storage_tank/annfiles/',
+        data_prefix=dict(img_path='val/storage_tank/images/'),
         batch_shapes_cfg=None),
-    class_text_path='data/texts/dota_v1_class_texts_helicopter.json')
+    class_text_path='data/texts/dota_v1_class_texts_zeroshot_fmow_storage_tank.json')
 
 val_dataloader = dict(dataset=dota_val_dataset)
 

@@ -18,33 +18,65 @@ def repeat_elements(arr, repeat_factor):
 def mask_visulize(masks):
     """将mask调用visualizer画出来，heatmap形式
     Args:
-        masks: shape = list(tensor(batchsize, 1, h, w)) len(masks) = 尺度数
+        masks: shape = list(tensor(batchsize, num_words, h, w)) len(masks) = 尺度数
     """
     _visualizer: Visualizer = Visualizer.get_current_instance()
     assert masks[0].shape[0] == 1 # 当前没有考虑batchsize > 1的情况
-    
-    heatmaps = []
-    max_size = max(mask.shape[2] for mask in masks)  # 找到最大的尺寸
-    for i in range(len(masks)):
-        mask = masks[i]
-        mask_img = mask[0, 0].cpu().numpy()
-        mask_img_uint8 = (mask_img * 255).astype(np.uint8)
-        repeat_factor = max_size // mask.shape[2]
+    if masks[0].shape[1]==1: # 此时是单通道mask，只需要显示三个尺度的mask即可，画在一行
+        heatmaps = []
+        max_size = max(mask.shape[2] for mask in masks)  # 找到最大的尺寸
+        for i in range(len(masks)): # 这里是三个尺度
+            mask = masks[i]
+            mask_img = mask[0, 0].cpu().numpy()
+            mask_img_uint8 = (mask_img * 255).astype(np.uint8)
+            repeat_factor = max_size // mask.shape[2]
+            
+            heatmap_resized = repeat_elements(mask_img_uint8, repeat_factor)
+            
+            # 将调整尺寸后的 heatmap 转换为彩色图像
+            heatmap = cv2.applyColorMap(heatmap_resized, cv2.COLORMAP_JET)  # 使用 JET 颜色映射
+            heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+            
+            heatmaps.append(heatmap)
         
-        heatmap_resized = repeat_elements(mask_img_uint8, repeat_factor)
+        combined_heatmap = np.hstack(heatmaps)
         
-        # 将调整尺寸后的 heatmap 转换为彩色图像
-        heatmap = cv2.applyColorMap(heatmap_resized, cv2.COLORMAP_JET)  # 使用 JET 颜色映射
-        heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+        total_curr_iter = GlobalClass.get_instance('batch_idx').value + GlobalClass.get_instance('runner').value.iter + 1
+        _visualizer.add_image('combined_mask', combined_heatmap, total_curr_iter)
+    else:  # 此时是多通道mask，需要分别显示每个通道的mask，num_words行，每行三个尺度的mask，最左边标一下通道对应的word
+        class_texts = GlobalClass.get_instance('class_texts').value  # list(str)
+        num_words = masks[0].shape[1]
+        max_size = max(mask.shape[2] for mask in masks)  # 找到最大的尺寸
         
-        heatmaps.append(heatmap)
-    
-    combined_heatmap = np.hstack(heatmaps)
-    
-    total_curr_iter = GlobalClass.get_instance('batch_idx').value + GlobalClass.get_instance('runner').value.iter + 1
-    _visualizer.add_image('combined_mask', combined_heatmap, total_curr_iter)
-
-import torch
+        # 创建一个大的画布来容纳所有的heatmap
+        canvas_height = num_words * max_size
+        canvas_width = (len(masks) + 1) * max_size  # +1 for the text column
+        canvas = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
+        
+        for word_idx in range(num_words):
+            # 添加文字``
+            text_img = np.zeros((max_size, max_size, 3), dtype=np.uint8)
+            cv2.putText(text_img, class_texts[word_idx], (10, max_size // 2),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            canvas[word_idx * max_size:(word_idx + 1) * max_size, 0:max_size] = text_img
+            
+            for scale_idx, mask in enumerate(masks):
+                mask_img = mask[0, word_idx].cpu().numpy()
+                mask_img_uint8 = (mask_img * 255).astype(np.uint8)
+                repeat_factor = max_size // mask.shape[2]
+                
+                heatmap_resized = repeat_elements(mask_img_uint8, repeat_factor)
+                
+                # 将调整尺寸后的 heatmap 转换为彩色图像
+                heatmap = cv2.applyColorMap(heatmap_resized, cv2.COLORMAP_JET)  # 使用 JET 颜色映射
+                heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+                
+                # 将heatmap放入画布中
+                canvas[word_idx * max_size:(word_idx + 1) * max_size,
+                       (scale_idx + 1) * max_size:(scale_idx + 2) * max_size] = heatmap
+        
+        total_curr_iter = GlobalClass.get_instance('batch_idx').value + GlobalClass.get_instance('runner').value.iter + 1
+        _visualizer.add_image('multi_channel_mask', canvas, total_curr_iter)
 
 def featuremap_visulize(feature_maps):
     """将feature map调用visualizer画出来
@@ -70,3 +102,4 @@ def featuremap_visulize(feature_maps):
     
     total_curr_iter = GlobalClass.get_instance('batch_idx').value + GlobalClass.get_instance('runner').value.iter + 1
     _visualizer.add_image('combined_featuremap', combined_heatmap, total_curr_iter)
+

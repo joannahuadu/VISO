@@ -1,5 +1,5 @@
 _base_ = (
-    'yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_infer_dota.py')
+    'yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_infer_single_task_simple_empty.py')
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
@@ -15,5 +15,4 @@ default_hooks = dict(
 custom_hooks = [ # 加这两个Hook，才能够在推理的时候把mask画出来
     dict(type='yolo_world.RunnerHook'),
     dict(type='yolo_world.BatchIdxHook'),
-    
 ]

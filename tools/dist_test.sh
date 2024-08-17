@@ -3,6 +3,7 @@
 CONFIG=$1
 CHECKPOINT=$2
 CUDA_VISIBLE_DEVICES=$3
+DEBUG=${4:-0}  # 如果没有传递参数，则将DEBUG设置为默认值0
 
 NNODES=${NNODES:-1}
 NODE_RANK=${NODE_RANK:-0}
@@ -22,5 +23,6 @@ CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES python -m torch.distributed.launch \
     $(dirname "$0")/test.py \
     $CONFIG \
     $CHECKPOINT \
+    --debug $DEBUG \
     --launcher pytorch \
-    ${@:4}
+    ${@:5}
