@@ -1,4 +1,4 @@
 # Copyright (c) Tencent Inc. All rights reserved.
 from .dynamic_loss import CoVMSELoss
-
-__all__ = ['CoVMSELoss']
+from .attnmask_loss import BCELoss
+__all__ = ['CoVMSELoss', 'BCELoss']
