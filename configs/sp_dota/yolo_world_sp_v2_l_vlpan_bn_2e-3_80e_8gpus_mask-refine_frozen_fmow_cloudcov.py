@@ -12,7 +12,7 @@ load_from = "weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth
 neck_reduce_num_heads= [1,1,1] #??
 
 # model settings
-model = dict(
+model = dict(type='CloudCoverageDetector',
     neck=dict(type='YOLOWorldPAFPNSP',
             #   reduce_embed_channels=neck_reduce_embed_channels,
               reduce_num_heads=neck_reduce_num_heads,
