@@ -1,3 +1,3 @@
 from .our_dota_metric import OurDOTAMetric
-
-__all__ = ['OurDOTAMetric']
+from .cloud_metric import CloudMetric
+__all__ = ['OurDOTAMetric', 'CloudMetric']
