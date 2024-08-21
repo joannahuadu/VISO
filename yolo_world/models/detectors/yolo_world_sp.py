@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from mmdet.structures import OptSampleList, SampleList
+from mmdet.utils import ConfigType
 from mmyolo.models.detectors import YOLODetector
 from mmyolo.registry import MODELS
 
