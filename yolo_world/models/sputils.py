@@ -265,6 +265,8 @@ def _make_indice_tensor(feature_value, indices, project=None, ishead=False):
         sparse_x = torch.cat(sparse_x, dim=0)
         sparse_yx = torch.stack((sparse_y, sparse_x), dim=0).t()
         sparse_yx = torch.unique(sparse_yx, sorted=False, dim=0)
+        if sparse_yx.shape[0] == 0:
+            sparse_yx = sparse_yx.reshape(0,3)
         sparse_y = sparse_yx[:, 0]
         sparse_x = sparse_yx[:, 1]
         
