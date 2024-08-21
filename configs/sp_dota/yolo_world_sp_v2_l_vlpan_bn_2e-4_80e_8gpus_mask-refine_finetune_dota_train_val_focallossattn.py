@@ -6,4 +6,4 @@ _base_.model.neck.reduce_block_cfg=dict(type='TextKnowledgeAttnBlock')
 _base_.model.bbox_head.loss_attn = dict(
                         type='mmdet.FocalLoss',
                         activated=True)
-_base_.model.bbox_head.is_skip_mask = True
+_base_.model.bbox_head.is_skip_mask = False

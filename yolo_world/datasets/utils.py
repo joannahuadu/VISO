@@ -58,3 +58,38 @@ def yolow_collate(data_batch: Sequence,
             batch_detection)
 
     return collated_results
+
+@COLLATE_FUNCTIONS.register_module()
+def yoloc_collate(data_batch: Sequence,
+                  use_ms_training: bool = False) -> dict:
+    """Rewrite collate_fn to get faster training speed.
+
+    Args:
+       data_batch (Sequence): Batch of data.
+       use_ms_training (bool): Whether to use multi-scale training.
+    """
+    batch_imgs = []
+    batch_bboxes_scores = []
+    for i in range(len(data_batch)):
+        datasamples = data_batch[i]['data_samples']
+        inputs = data_batch[i]['inputs']
+        batch_imgs.append(inputs)
+
+        gt_bboxes = datasamples.gt_instances.bboxes
+        gt_scores = datasamples.gt_instances.scores.view(-1,1)
+        bboxes_scores = torch.cat((gt_scores, gt_bboxes),
+                                  dim=1)
+        batch_bboxes_scores.append(bboxes_scores)
+
+    collated_results = {
+        'data_samples': {
+            'bboxes_scores': torch.cat(batch_bboxes_scores, 0)
+        }
+    }
+
+    if use_ms_training:
+        collated_results['inputs'] = batch_imgs
+    else:
+        collated_results['inputs'] = torch.stack(batch_imgs, 0)
+
+    return collated_results

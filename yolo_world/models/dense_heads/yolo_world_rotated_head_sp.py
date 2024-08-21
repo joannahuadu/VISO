@@ -44,13 +44,13 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
 
     def __init__(self, 
                 # TODO add configs
-                attn_loss_weight: List[float] = [],
+                # attn_loss_weight: List[float] = [],
                 is_split_attn: bool = False,
                 loss_attn: ConfigType = dict(
                      type='BCELoss',
                      reduction='mean'),
                 is_skip_mask: bool = False,
-                is_loss_weight: bool = False,
+                loss_attn_weight: int = 1,
                 *args, **kwargs) -> None:
         # TODO add init
         super().__init__(*args, **kwargs)
@@ -58,8 +58,8 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         self.loss_attn: nn.Module = MODELS.build(loss_attn)
         self.is_split_attn = is_split_attn
         self.is_skip_mask = is_skip_mask
-        self.is_loss_weight = is_loss_weight
-        self.attn_loss_weight = attn_loss_weight
+        self.loss_attn_weight = loss_attn_weight
+        # self.attn_loss_weight = attn_loss_weight
    
     def loss(self, img_feats: Tuple[Tensor], txt_feats: Tensor,
              batch_data_samples: Union[list, dict]) -> dict:
@@ -266,7 +266,7 @@ class YOLOWorldRotatedHeadSP(YOLOWorldRotatedHead):
         losses['loss_bbox'] = loss_bbox * num_imgs * world_size
         if self.loss_angle is not None:
             losses['loss_angle'] = loss_angle * num_imgs * world_size
-        losses['loss_mask'] = loss_mask * num_imgs * world_size
+        losses['loss_mask'] = self.loss_attn_weight * loss_mask * num_imgs * world_size
         
         return losses
         # return dict(
