@@ -2,12 +2,14 @@
 from typing import List, Tuple, Union
 import torch
 import torch.nn as nn
+import logging
 from torch import Tensor
 from mmdet.structures import OptSampleList, SampleList
 from mmdet.utils import ConfigType, InstanceList
 from mmdet.models.utils import samplelist_boxtype2tensor
 from mmyolo.models.detectors import YOLODetector
 from mmyolo.registry import MODELS
+from mmengine.logging import print_log
 
 from .yolo_world import YOLOWorldDetector, SimpleYOLOWorldDetector
 from mmrotate.structures.bbox import RotatedBoxes
@@ -114,6 +116,10 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
             cloud_cov = self.cloud_model.predict(img_feats,
                                                 batch_data_samples)
             pred_score = cloud_cov[0]['clouds']
+            print_log(
+                    f'{batch_data_samples[0].img_path}: {pred_score}.',
+                    logger='current',
+                    level=logging.INFO)
             if pred_score > self.cov_thr:
                 return None, None, pred_score
         

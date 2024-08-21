@@ -75,19 +75,20 @@ class CloudMetric(BaseMetric):
         for data_sample in data_samples:
             gt = copy.deepcopy(data_sample)
             gt_instances = gt['gt_instances']
+            gt_clouds = gt['gt_clouds']
             if gt_instances == {}:
                 ann = dict()
             else:
                 ann = dict(
-                    scores=gt_instances['scores'].cpu().numpy(),
+                    scores=gt_clouds['scores'].cpu().numpy(),
                     bboxes=gt_instances['bboxes'].cpu().numpy())
             result = dict()
             pred = data_sample['pred_instances']
-            pred_cloud = data_sample['pred_clouds']
+            pred_clouds = data_sample['pred_clouds']
             result['img_id'] = data_sample['img_id']
             result['bboxes'] = pred['bboxes'].cpu().numpy()
             result['labels'] = pred['labels'].cpu().numpy()
-            result['scores'] = pred_cloud['scores'].cpu().numpy()
+            result['scores'] = pred_clouds['scores'].cpu().numpy()
 
             self.results.append((ann, result))
 
