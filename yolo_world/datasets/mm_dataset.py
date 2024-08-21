@@ -25,11 +25,12 @@ class MultiModalDataset:
                  class_text_path: str = None,
                  test_mode: bool = True,
                  pipeline: List[Union[dict, Callable]] = [],
-                 lazy_init: bool = False) -> None:
+                 lazy_init: bool = False,
+                 replace_char: str = "-") -> None:
         self.dataset: BaseDataset
         if class_text_path is not None:
             self.class_texts = json.load(open(class_text_path, 'r'))
-            classes = tuple(item.replace(" ", "-") for sublist in self.class_texts for item in sublist)
+            classes = tuple(item.replace(" ", replace_char) for sublist in self.class_texts for item in sublist)
             metainfo = dict()
             metainfo['classes'] = classes
             # metainfo['palette'] = self.PALETTE[:len(self.class_texts)]

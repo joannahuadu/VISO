@@ -83,8 +83,11 @@ class CloudMetric(BaseMetric):
                     bboxes=gt_instances['bboxes'].cpu().numpy())
             result = dict()
             pred = data_sample['pred_instances']
+            pred_cloud = data_sample['pred_clouds']
             result['img_id'] = data_sample['img_id']
-            result['scores'] = pred['scores'].cpu().numpy()
+            result['bboxes'] = pred['bboxes'].cpu().numpy()
+            result['labels'] = pred['labels'].cpu().numpy()
+            result['scores'] = pred_cloud['scores'].cpu().numpy()
 
             self.results.append((ann, result))
 

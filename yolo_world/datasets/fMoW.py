@@ -14,6 +14,7 @@ from ..registry import DATASETS
 class fMoWDataset(BaseDataset): 
     def __init__(self, 
                  data_root: Optional[str] = '',
+                 mode: str = 'val',
                  test_mode: bool = False,
                  meta_label: str = 'cloud_cover',
                  **kwargs) -> None:
@@ -24,10 +25,7 @@ class fMoWDataset(BaseDataset):
             - "cloud_cover"
         '''
         self.meta_label = meta_label
-        if test_mode:
-            self.mode = 'val'
-        else:
-            self.mode = 'train'
+        self.mode = mode
         txt_files = osp.join(data_root, "fMoW_"+self.mode+".json")
         with open(txt_files, "r+", encoding='utf-8') as f:
             self.dict_list=json.load(f)
@@ -39,6 +37,9 @@ class fMoWDataset(BaseDataset):
         Returns:
             List[dict]: A list of annotation.
         """  # noqa: E501
+        cls_map = {c: i
+            for i, c in enumerate(self.metainfo['classes'])
+            }  # i
         data_list = []
 
         for di in self.dict_list:
@@ -56,11 +57,18 @@ class fMoWDataset(BaseDataset):
             instances = []
             instance = {}
             bbox = di["box"]
-            instance['bbox'] = [float(i) for i in bbox]
+            cls_name = di["category"]
+            if cls_name in self.metainfo['classes']:
+                instance['bbox'] = [float(i) for i in bbox]
+                instance['bbox_label'] = cls_map[cls_name]
+                instances.append(instance)
+            data_info['instances'] = instances
+            metas = []
+            meta = {}
             if self.meta_label in di:
-                instance[self.meta_label] = di[self.meta_label]
-            
-            data_info['instances'] = [instance]
+                meta[self.meta_label] = di[self.meta_label]
+                metas.append(meta)
+            data_info['metas'] = metas
             data_list.append(data_info)
 
         return data_list
@@ -75,5 +83,5 @@ class fMoWDataset(BaseDataset):
         """
 
         instances = self.get_data_info(idx)['instances']
-        return [instance['cov_scores'] for instance in instances]
+        return [instance['bbox_label'] for instance in instances]
 
