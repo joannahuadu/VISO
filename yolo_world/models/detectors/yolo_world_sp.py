@@ -16,9 +16,19 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
     """Implementation of YOLO World Series"""
 
     def __init__(self,
+                 cloud_model: ConfigType,
+                 with_cloud_model: bool = False,
+                 cov_thr: float = 70,
                  *args,
                  **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.with_cloud_model = with_cloud_model
+        if self.with_cloud_model:
+            self.cloud_model = MODELS.build(cloud_model)
+            self.cov_thr = cov_thr
+        else:
+            self.cloud_model = None
+            self.cov_thr = None
 
     def predict(self,
                 batch_inputs: Tensor,
@@ -75,3 +85,35 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
         else:
             results = self.bbox_head.forward(img_feats, txt_feats)
         return results
+
+    def extract_feat(
+            self, batch_inputs: Tensor,
+            batch_data_samples: SampleList) -> Tuple[Tuple[Tensor], Tensor]:
+        """Extract features."""
+        # only image features
+        img_feats, _ = self.backbone(batch_inputs, None)
+        
+        # cloud detection
+        if self.with_cloud_model:
+            cloud_cov = self.cloud_model.predict(img_feats,
+                                                batch_data_samples)
+            assert len(cloud_cov)==1
+            pred_score = cloud_cov[0]['scores']
+            if pred_score > self.cov_thr:
+                return None, dict(scores=pred_score)
+        
+        if not self.reparameterized:
+            # use embeddings
+            txt_feats = self.embeddings[None]
+            if self.adapter is not None:
+                txt_feats = self.adapter(txt_feats) + txt_feats
+                txt_feats = nn.functional.normalize(txt_feats, dim=-1, p=2)
+            txt_feats = txt_feats.repeat(img_feats[0].shape[0], 1, 1)
+        else:
+            txt_feats = None
+        if self.with_neck:
+            if self.mm_neck:
+                img_feats = self.neck(img_feats, txt_feats)
+            else:
+                img_feats = self.neck(img_feats)
+        return img_feats, txt_feats

@@ -3,8 +3,8 @@ _base_ = (
     'yolo_world_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
 
 # hyper-parameters
-train_batch_size_per_gpu = 16
-val_batch_size_per_gpu = 16
+train_batch_size_per_gpu = 32
+val_batch_size_per_gpu = 32
 load_from = "/mnt/data1/workspace/wmq/YOLO-World/work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_67.pth"
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
