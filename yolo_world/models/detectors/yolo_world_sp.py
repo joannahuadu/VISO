@@ -17,7 +17,7 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
     """Implementation of YOLO World Series"""
 
     def __init__(self,
-                 cloud_model: ConfigType,
+                 cloud_model: ConfigType = None,
                  with_cloud_model: bool = False,
                  cov_thr: float = 70,
                  *args,
@@ -25,6 +25,8 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
         super().__init__(*args, **kwargs)
         self.with_cloud_model = with_cloud_model
         if self.with_cloud_model:
+            if cloud_model is None:
+                raise ValueError("`cloud_model` cannot be None when `with_cloud_model` is True.")
             self.cloud_model = MODELS.build(cloud_model)
             self.cov_thr = cov_thr
         else:
