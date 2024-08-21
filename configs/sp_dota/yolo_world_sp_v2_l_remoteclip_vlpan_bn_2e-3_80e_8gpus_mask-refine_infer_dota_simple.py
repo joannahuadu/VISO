@@ -10,7 +10,7 @@ load_from = "work_dirs/yolo_world_sp_v2_l_remoteclip_vlpan_bn_2e-4_80e_8gpus_mas
 embedding_path = "tools/embeddings/dota_v1_class_texts_remoteclip_all_embedding.npy"
 
 # model settings
-model = dict(type='SimpleYOLOWorldDetector',
+model = dict(type='SimpleYOLOWorldDetectorSP',
     mm_neck=True,
     num_train_classes=_base_.num_training_classes,
     num_test_classes=_base_.num_classes,
@@ -21,7 +21,7 @@ model = dict(type='SimpleYOLOWorldDetector',
     neck=dict(type='YOLOWorldPAFPNSPInfer',
               block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConvSPInfer', sp_type="vspconv"),
               is_sparse_levels=is_sparse_levels,
-              score_th=0.001,
+              score_th=0.01,
             #   reduce_embed_channels=neck_reduce_embed_channels,
             #   downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),
               reduce_num_heads=neck_reduce_num_heads,
