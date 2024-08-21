@@ -467,11 +467,13 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
     """YOLO-World Head
     """
     def __init__(self, 
+                 box_type: str = None,
                 *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.num_levels = self.head_module.num_levels
         self.sp_module = ['head_module']
-    
+        self.box_type = box_type
+
     def forward(self, img_feats: Tuple[Tensor],
                 txt_feats: Tensor) -> Tuple[List]:
         """Forward features from the upstream network."""
@@ -674,7 +676,9 @@ class YOLOWorldRotatedHeadSPInfer(YOLOWorldRotatedHead):
             if cfg.get('yolox_style', False):
                 # do not need max_per_img
                 cfg.max_per_img = len(results)
-
+            
+            if self.box_type is not None:
+                results.bboxes = results.bboxes.convert_to(self.box_type).tensor
             results = self._bbox_post_process(results=results,
                                               cfg=cfg,
                                               rescale=False,
