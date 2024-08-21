@@ -6,11 +6,16 @@ device='cuda:0'
 from yolo_world.models.sputils import SPInfer
 import numpy as np
 # x_d = torch.zeros((1, 128, 256, 256))
+#s
 # 64,128,128
 # 128, 64, 64
 # 256, 32, 32
-channel = 64
-H, W = 128, 128
+#m
+#96, 128,128
+#192, 64,64
+#288,32,32
+channel = 288
+H, W = 32,32
 # torch.Size([1, 256, 200, 304])
 sp = [H, int(H*3/4), int(H*2/3), int(H*1/2), int(H*1/3), int(H*1/4), int(H*1/5), int(H*1/10)]
 # sp = [20]

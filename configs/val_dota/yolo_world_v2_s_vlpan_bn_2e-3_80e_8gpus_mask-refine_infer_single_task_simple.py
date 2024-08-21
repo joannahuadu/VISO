@@ -1,9 +1,9 @@
 _base_ = (
-    'yolo_world_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py'
+    'yolo_world_v2_s_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py'
 )
 
 num_classes = 1
-load_from = "work_dirs/yolo_world_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_55.pth"
+load_from = "work_dirs/yolo_world_v2_s_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_51.pth"
 embedding_path = "tools/embeddings/dota_v1_class_texts_helicopter_embedding.npy"
 
 model = dict(type='SimpleYOLOWorldDetector',
