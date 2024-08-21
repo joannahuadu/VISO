@@ -1,4 +1,4 @@
 # Copyright (c) Tencent Inc. All rights reserved.
-from .data_preprocessor import YOLOWDetDataPreprocessor
+from .data_preprocessor import YOLOWDetDataPreprocessor, YOLOCDetDataPreprocessor
 
-__all__ = ['YOLOWDetDataPreprocessor']
+__all__ = ['YOLOWDetDataPreprocessor', 'YOLOCDetDataPreprocessor']

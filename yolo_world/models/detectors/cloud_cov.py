@@ -15,10 +15,14 @@ class CloudCoverageDetector(YOLODetector):
 
     def __init__(self,
                  *args,
+                 mm_neck: bool = False,
+                 num_train_classes=80,
+                 num_test_classes=80,
                  cloud_model: ConfigType,
                  with_cloud_model: bool = True,
                  **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.with_cloud_model = with_cloud_model
         if self.with_cloud_model:
             self.cloud_model = MODELS.build(cloud_model)
         else:
@@ -35,8 +39,7 @@ class CloudCoverageDetector(YOLODetector):
 
     def predict(self,
                 batch_inputs: Tensor,
-                batch_data_samples: SampleList,
-                rescale: bool = True) -> SampleList:
+                batch_data_samples: SampleList) -> SampleList:
         """Predict results from a batch of inputs and data samples with post-
         processing.
         """
@@ -45,8 +48,7 @@ class CloudCoverageDetector(YOLODetector):
                                                  batch_data_samples)
 
         results_list = self.cloud_model.predict(img_feats,
-                                              batch_data_samples,
-                                              rescale=rescale)
+                                              batch_data_samples)
 
         batch_data_samples = self.add_pred_to_datasample(
             batch_data_samples, results_list)
@@ -68,8 +70,7 @@ class CloudCoverageDetector(YOLODetector):
             self, batch_inputs: Tensor,
             batch_data_samples: SampleList) -> Tuple[Tuple[Tensor], Tensor]:
         """Extract features."""
-        txt_feats = None
+        
         img_feats = self.backbone.forward_image(batch_inputs)
-    
         return img_feats
 
