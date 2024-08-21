@@ -14,7 +14,7 @@ class IndiceTensor(torch.Tensor):
             indices: [num_points, ndim + 1] indice tensor. batch index saved in indices[:, 0]
         """
         # Ensure indices is a 2D tensor with int32 type
-        assert indices.ndim == 2, "indices must be a 2D tensor"
+        # assert indices.ndim == 2, "indices must be a 2D tensor"
         assert indices.dtype == torch.int32, "indices must be of type int32"
 
         # Create a new tensor instance with the features
@@ -238,6 +238,8 @@ def _make_indice_tensor(feature_value, indices, project=None, ishead=False):
         else:
             return torch.Tensor(feature_value)
     elif project=='up':
+        if indices.shape[0] == 0:
+            indices = indices.reshape(0,3)
         y = indices[:, 1]
         x = indices[:, 2]
         sparse_y, sparse_x = [], []
@@ -249,6 +251,8 @@ def _make_indice_tensor(feature_value, indices, project=None, ishead=False):
         sparse_y = torch.cat(sparse_y, dim=0)
         sparse_x = torch.cat(sparse_x, dim=0)
     else:
+        if indices.shape[0] == 0:
+            indices = indices.reshape(0,3)
         y = indices[:, 1]
         x = indices[:, 2]
         sparse_y, sparse_x = [], []
@@ -272,6 +276,8 @@ def _make_sparse_tensor(feature_value, indices):
     if isinstance(feature_value, spconv.SparseConvTensor):
         return feature_value
     _, fc, fh, fw = feature_value.shape
+    if indices.shape[0] == 0:
+        indices = indices.reshape(0,3)
     sparse_y = indices[:, 1]
     sparse_x = indices[:, 2]
 
