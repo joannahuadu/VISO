@@ -4,7 +4,7 @@ _base_ = (
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
-is_sparse_levels = [0,0,0]
+is_sparse_levels = [1,0,0]
 num_classes = 1
 load_from = "work_dirs/yolo_world_sp_v2_s_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_58.pth"
 embedding_path = "tools/embeddings/dota_v1_class_texts_helicopter_embedding.npy"
