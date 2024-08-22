@@ -1,5 +1,5 @@
 _base_ = (
-    '../val_dota/'
+    '../../val_dota/'
     'yolo_world_v2_l_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
 
 # hyper-parameters
