@@ -77,7 +77,7 @@ def yoloc_collate(data_batch: Sequence,
 
         gt_bboxes = datasamples.gt_instances.bboxes
         gt_labels = datasamples.gt_instances.labels
-        gt_scores = datasamples.gt_instances.scores.view(-1,1)
+        gt_scores = datasamples.gt_clouds.scores.view(-1,1)
         bboxes_scores = torch.cat((gt_scores, gt_labels[:, None], gt_bboxes),
                                   dim=1)
         batch_bboxes_scores.append(bboxes_scores)

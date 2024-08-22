@@ -173,7 +173,7 @@ class CloudCoverageHead(BaseDenseHead):
         score = sum(cov_scores) / self.num_levels
         results_list = []
         for sc in score:
-            results = InstanceData(clouds=sc)
+            results = InstanceData(scores=sc)
             results_list.append(results)
         return results_list
 

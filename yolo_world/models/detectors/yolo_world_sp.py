@@ -115,7 +115,7 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
         if self.with_cloud_model:
             cloud_cov = self.cloud_model.predict(img_feats,
                                                 batch_data_samples)
-            pred_score = cloud_cov[0]['clouds']
+            pred_score = cloud_cov[0]['scores']
             print_log(
                     f'{batch_data_samples[0].img_path}: {pred_score}.',
                     logger='current',

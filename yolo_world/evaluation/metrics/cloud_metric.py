@@ -45,6 +45,7 @@ class CloudMetric(BaseMetric):
     default_prefix: Optional[str] = 'fmow'
 
     def __init__(self,
+                 is_infer: bool = False,
                  metric: Union[str, List[str]] = 'mse',
                  collect_device: str = 'cpu',
                  prefix: Optional[str] = None,
@@ -59,6 +60,7 @@ class CloudMetric(BaseMetric):
             raise KeyError(f"metric should be one of 'mAP', but got {metric}.")
         self.metric = metric
         self.cov_thr = cov_thr
+        self.is_infer = is_infer
 
 
     def process(self, data_batch: Sequence[dict],
@@ -81,14 +83,21 @@ class CloudMetric(BaseMetric):
             else:
                 ann = dict(
                     scores=gt_clouds['scores'].cpu().numpy(),
-                    bboxes=gt_instances['bboxes'].cpu().numpy())
+                    bboxes=gt_instances['bboxes'].cpu().numpy(),
+                    labels=gt_instances['labels'].cpu().numpy())
             result = dict()
-            pred = data_sample['pred_instances']
-            pred_clouds = data_sample['pred_clouds']
-            result['img_id'] = data_sample['img_id']
-            result['bboxes'] = pred['bboxes'].cpu().numpy()
-            result['labels'] = pred['labels'].cpu().numpy()
-            result['scores'] = pred_clouds['scores'].cpu().numpy()
+            if self.is_infer:
+                pred = data_sample['pred_instances']
+                pred_clouds = data_sample['pred_clouds']
+                result['img_id'] = data_sample['img_id']
+                result['bboxes'] = pred['bboxes'].cpu().numpy()
+                result['labels'] = pred['labels'].cpu().numpy()
+                result['scores'] = pred['scores'].cpu().numpy()
+                result['clouds'] = pred_clouds['scores'].cpu().numpy()
+            else:
+                pred = data_sample['pred_instances']
+                result['img_id'] = data_sample['img_id']
+                result['clouds'] = pred['scores'].cpu().numpy()
 
             self.results.append((ann, result))
 
@@ -104,7 +113,7 @@ class CloudMetric(BaseMetric):
         logger: MMLogger = MMLogger.get_current_instance()
         gts, preds = zip(*results)
         gts_ = [gt['scores'] for gt in gts]
-        dets = [pred['scores'] for pred in preds]
+        dets = [pred['clouds'] for pred in preds]
         gts_ = np.concatenate(gts_, axis=0)
         dets = np.concatenate(dets, axis=0)
 
