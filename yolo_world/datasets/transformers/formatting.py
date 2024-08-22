@@ -133,13 +133,10 @@ class LoadAnnotations(MMCV_LoadAnnotations):
         """
         gt_bboxes = []
         for instance in results.get('instances', []):
-            if len(instance['bbox']) == 4:
-                x1, y1, width, height = instance['bbox']
-                x2 = x1 + width
-                y2 = y1 + height
-                gt_bboxes.append([x1, y1, x2, y2])
-            else:
-                gt_bboxes.append(instance['bbox'])
+            x1, y1, width, height = instance['bbox']
+            x2 = x1 + width
+            y2 = y1 + height
+            gt_bboxes.append([x1, y1, x2, y2])
             # gt_bboxes.append(instance['bbox'])
         if self.box_type is None:
             results['gt_bboxes'] = np.array(

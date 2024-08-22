@@ -8,7 +8,7 @@ is_sparse_levels = [0,0,0]
 num_classes = 1
 load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_37.pth"
 embedding_path = "tools/embeddings/dota_v1_class_texts_zeroshot_fmow_airport_embedding.npy"
-cov_thr = 15
+cov_thr = 16.5
 
 # model settings
 model = dict(type='SimpleYOLOWorldDetectorSP',
@@ -78,8 +78,8 @@ val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
 
-# val_evaluator = dict(_delete_=True, type='CloudMetric', metric='accuracy', is_infer=True)
-# test_evaluator = val_evaluator
+val_evaluator = dict(_delete_=True, type='CloudMetric', metric='accuracy', is_infer=True)
+test_evaluator = val_evaluator
 
 custom_hooks = [
     dict(
