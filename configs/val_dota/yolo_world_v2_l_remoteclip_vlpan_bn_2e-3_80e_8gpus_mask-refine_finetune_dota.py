@@ -22,7 +22,7 @@ train_batch_size_per_gpu = 4
 load_from = "weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
 text_model_name = 'ViT-B-32'
-text_pretrained = 'weights/models--chendelong--RemoteCLIP/snapshots/bf1d8a3ccf2ddbf7c875705e46373bfe542bce38/RemoteCLIP-ViT-B-32.pt'
+text_pretrained = '/mnt/data1/workspace/wmq/YOLO-World/weights/models--chendelong--RemoteCLIP/snapshots/bf1d8a3ccf2ddbf7c875705e46373bfe542bce38/RemoteCLIP-ViT-B-32.pt'
 # text_model_name = 'openai/clip-vit-base-patch32'
 persistent_workers = False
 

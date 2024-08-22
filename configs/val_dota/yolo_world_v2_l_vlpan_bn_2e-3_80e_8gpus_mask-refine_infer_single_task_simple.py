@@ -11,7 +11,7 @@ model = dict(type='SimpleYOLOWorldDetector',
     mm_neck=True,
     embedding_path=embedding_path,
     prompt_dim=_base_.text_channels,
-    num_prompts=15,
+    num_prompts= num_classes,
     backbone=dict(with_text_model=False),
     bbox_head = dict(
         head_module=dict(num_classes = num_classes),
