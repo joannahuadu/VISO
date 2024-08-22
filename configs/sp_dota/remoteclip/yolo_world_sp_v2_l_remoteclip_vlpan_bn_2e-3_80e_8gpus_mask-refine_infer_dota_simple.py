@@ -1,5 +1,5 @@
 _base_ = (
-    '../val_dota/'
+    '../../val_dota/'
     'yolo_world_v2_l_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
@@ -7,12 +7,20 @@ neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [1,1,1]
 
 load_from = "work_dirs/yolo_world_sp_v2_l_remoteclip_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_16.pth"
+embedding_path = "tools/embeddings/dota_v1_class_texts_remoteclip_all_embedding.npy"
 
 # model settings
-model = dict(
+model = dict(type='SimpleYOLOWorldDetectorSP',
+    mm_neck=True,
+    num_train_classes=_base_.num_training_classes,
+    num_test_classes=_base_.num_classes,
+    embedding_path=embedding_path,
+    prompt_dim=_base_.text_channels,
+    num_prompts=_base_.num_classes,
+    backbone=dict(with_text_model=False),
     neck=dict(type='YOLOWorldPAFPNSPInfer',
               block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConvSPInfer', sp_type="vspconv"),
-              is_sparse_levels = is_sparse_levels,
+              is_sparse_levels=is_sparse_levels,
               score_th=0.01,
             #   reduce_embed_channels=neck_reduce_embed_channels,
             #   downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),

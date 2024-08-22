@@ -1,12 +1,12 @@
 _base_ = (
     '../val_dota/'
-    'yolo_world_v2_l_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
+    'yolo_world_v2_m_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [1,1,1]
 
-load_from = "work_dirs/yolo_world_sp_v2_l_remoteclip_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_16.pth"
+load_from = "work_dirs/yolo_world_sp_v2_m_remoteclip_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_61.pth"
 embedding_path = "tools/embeddings/dota_v1_class_texts_remoteclip_all_embedding.npy"
 
 # model settings
