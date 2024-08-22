@@ -55,11 +55,15 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
                                         labels=empty_labels,
                                         bboxes=empty_bboxes)
             results_list.append(empty_results)
-            clouds_list = []
-            clouds_list.append(InstanceData(scores=pred_score))
-            
-            batch_data_samples = self.add_pred_to_datasample(
-                batch_data_samples, results_list, clouds_list)
+            if pred_score is not None:
+                clouds_list = []
+                clouds_list.append(InstanceData(scores=pred_score))
+                
+                batch_data_samples = self._add_pred_to_datasample(
+                    batch_data_samples, results_list, clouds_list)
+            else:
+                batch_data_samples = self.add_pred_to_datasample(
+                    batch_data_samples, results_list)
             return batch_data_samples
             
         self.bbox_head.num_classes = self.num_test_classes
@@ -72,13 +76,17 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
                                                   txt_feats,
                                                   batch_data_samples,
                                                   rescale=rescale)
-        clouds_list = []
-        clouds_list.append(InstanceData(scores=pred_score))
-        batch_data_samples = self.add_pred_to_datasample(
-            batch_data_samples, results_list, clouds_list)
+        if pred_score is not None:
+            clouds_list = []
+            clouds_list.append(InstanceData(scores=pred_score))
+            batch_data_samples = self._add_pred_to_datasample(
+                batch_data_samples, results_list, clouds_list)
+        else:
+            batch_data_samples = self.add_pred_to_datasample(
+                batch_data_samples, results_list)
         return batch_data_samples
     
-    def add_pred_to_datasample(self, data_samples: SampleList,
+    def _add_pred_to_datasample(self, data_samples: SampleList,
                                results_list: InstanceList, clouds_list: InstanceList) -> SampleList:
         for data_sample, pred_instances, pred_clouds in zip(data_samples, results_list, clouds_list):
             data_sample.pred_instances = pred_instances

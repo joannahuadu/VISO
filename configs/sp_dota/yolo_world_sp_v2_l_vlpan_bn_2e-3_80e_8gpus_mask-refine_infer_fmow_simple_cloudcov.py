@@ -6,8 +6,8 @@ _base_ = (
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
 num_classes = 1
-load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_6.pth"
-embedding_path = "/mnt/data1/workspace/wmq/YOLO-World/tools/embeddings/dota_v1_class_texts_zeroshot_fmow_storage_tank_embedding.npy"
+load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_37.pth"
+embedding_path = "tools/embeddings/dota_v1_class_texts_zeroshot_fmow_airport_embedding.npy"
 cov_thr = 15
 
 # model settings
@@ -66,20 +66,20 @@ dota_val_dataset = dict(
       _delete_=True,
       _scope_='yolo_world',
       type='fMoWDataset',
-      mode='val1',
+      mode='val_example',
       test_mode = True,
-      data_root='/mnt/data1/workspace/wmq/YOLO-World/data/fMoW',
+      data_root='data/fMoW',
       meta_label='cloud_cover'),
     replace_char = "_",
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v1_class_texts_zeroshot_fmow_storage_tank.json',
+    class_text_path='data/texts/fmow_airport.json',
     pipeline=test_pipeline)
 
 val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
 
-val_evaluator = dict(_delete_=True, type='CloudMetric', metric='accuracy', is_infer=True)
-test_evaluator = val_evaluator
+# val_evaluator = dict(_delete_=True, type='CloudMetric', metric='accuracy', is_infer=True)
+# test_evaluator = val_evaluator
 
 custom_hooks = [
     dict(
