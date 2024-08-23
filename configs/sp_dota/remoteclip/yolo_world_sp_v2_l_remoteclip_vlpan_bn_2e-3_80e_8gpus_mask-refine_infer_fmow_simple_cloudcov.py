@@ -1,13 +1,13 @@
 _base_ = (
-    '../val_dota/'
-    'yolo_world_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
+    '../../val_dota/'
+    'yolo_world_v2_l_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
 num_classes = 1
-load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_6.pth"
-# load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_67.pth"
+# load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_6.pth"
+load_from = "work_dirs/yolo_world_sp_v2_l_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_5.pth"
 embedding_path = "tools/embeddings/remoteclip_fmow_plane.npy"
 cov_thr = 17
 
