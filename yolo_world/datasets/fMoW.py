@@ -12,6 +12,16 @@ from ..registry import DATASETS
 
 @DATASETS.register_module()
 class fMoWDataset(BaseDataset): 
+    METAINFO = {
+        'classes':('nuclear_powerplant', 'office_building', 'border_checkpoint', 'interchange', 'amusement_park', 'helipad', 'airport_hangar', 'archaeological_site', 'solar_farm', 'tunnel_opening', 'place_of_worship', 'car_dealership', 'flooded_road', 'aquaculture', 'tower', 'hospital', 'impoverished_settlement', 'space_facility', 'runway', 'surface_mine', 'gas_station', 'fire_station', 'recreational_facility', 'construction_site', 'electric_substation', 'port', 'shopping_mall', 'parking_lot_or_garage', 'swimming_pool', 'burial_site', 'road_bridge', 'race_track', 'waste_disposal', 'airport', 'ground_transportation_station', 'zoo', 'prison', 'shipyard', 'smokestack', 'oil_or_gas_facility', 'fountain', 'storage_tank', 'factory_or_powerplant', 'debris_or_rubble', 'single-unit_residential', 'lighthouse', 'stadium', 'dam', 'police_station', 'toll_booth', 'wind_farm', 'golf_course', 'multi-unit_residential', 'railway_bridge', 'educational_institution', 'airport_terminal', 'park', 'water_treatment_facility', 'lake_or_pond', 'crop_field', 'military_facility', 'barn'),
+        # 'classes':
+        # ('plane', 'baseball-diamond', 'bridge', 'ground-track-field',
+        #  'small-vehicle', 'large-vehicle', 'ship', 'tennis-court',
+        #  'basketball-court', 'storage-tank', 'soccer-ball-field', 'roundabout',
+        #  'harbor', 'swimming-pool', 'helicopter'),
+        # palette is a list of color tuples, which is used for visualization.
+    }
+
     def __init__(self, 
                  data_root: Optional[str] = '',
                  mode: str = 'val',

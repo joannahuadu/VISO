@@ -216,6 +216,7 @@ class CloudCoverageHead(BaseDenseHead):
         device = cov_scores[0].device
         score = sum(cov_scores) / self.num_levels
         loss_pre = torch.zeros(1, device=device)
+        # loss_pre += (self.loss_pre(score, gt_scores) * torch.log(gt_scores + 1)).mean()
         loss_pre += self.loss_pre(score, gt_scores)
         
         return dict(loss_pre= loss_pre * num_imgs * 0.01)
