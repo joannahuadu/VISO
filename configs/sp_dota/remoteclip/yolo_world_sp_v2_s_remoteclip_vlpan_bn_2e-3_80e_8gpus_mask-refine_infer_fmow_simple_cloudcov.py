@@ -8,7 +8,7 @@ is_sparse_levels = [0,0,0]
 num_classes = 1
 load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_5.pth"
 # load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_64.pth"
-embedding_path = "/mnt/data1/workspace/wmq/YOLO-World/tools/embeddings/remoteclip_fmow_plane.npy"
+embedding_path = "/mnt/data1/workspace/wmq/YOLO-World/tools/embeddings/remoteclip_fmow_storage_tank.npy"
 cov_thr = 17
 
 # model settings
@@ -67,19 +67,19 @@ dota_val_dataset = dict(
       _delete_=True,
       _scope_='yolo_world',
       type='fMoWDataset',
-      mode='val_1000_h30',
+      mode='storage_tank',
       test_mode = True,
       data_root='/mnt/data1/workspace/wmq/YOLO-World/data/fMoW',
       meta_label='cloud_cover'),
     replace_char = "_",
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/fmow_plane.json',
+    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/fmow_storage_tank.json',
     pipeline=test_pipeline)
 
 val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
 
-val_evaluator = dict(type='OurDOTAMetric', task='task2')
+val_evaluator = dict(type='OurDOTAMetric', task='task2', iou_thrs=0.05)
 test_evaluator = val_evaluator
 
 custom_hooks = [
