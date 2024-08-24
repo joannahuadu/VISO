@@ -6,9 +6,9 @@ _base_ = (
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
 num_classes = 1
-load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_5.pth"
+load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_5.pth"
 # load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_64.pth"
-embedding_path = "tools/embeddings/remoteclip_fmow_storage_tank.npy"
+embedding_path = "/mnt/data1/workspace/wmq/YOLO-World/tools/embeddings/remoteclip_fmow_plane.npy"
 cov_thr = 17
 
 # model settings
@@ -20,7 +20,7 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
                                       featmap_strides=_base_.strides,
                                       norm_cfg=_base_.norm_cfg,
                                       act_cfg=dict(type='SiLU', inplace=True))),
-    with_cloud_model=False,
+    with_cloud_model=True,
     cov_thr = cov_thr,
     mm_neck=True,
     num_train_classes=_base_.num_training_classes,
@@ -38,7 +38,7 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
               reduce_num_heads=neck_reduce_num_heads,
               reduce_block_cfg=dict(type='KnowledgeAttnBlock')),
     bbox_head=dict(type='YOLOWorldRotatedHeadSPInfer',
-                #   box_type='hbox',
+                  box_type='hbox',
                   head_module=dict(type='YOLOWorldRotatedHeadModuleSPInfer',
                                   sp_type="vspconv",
                                   num_classes=num_classes,
@@ -69,17 +69,17 @@ dota_val_dataset = dict(
       type='fMoWDataset',
       mode='val_example',
       test_mode = True,
-      data_root='data/fMoW',
+      data_root='/mnt/data1/workspace/wmq/YOLO-World/data/fMoW',
       meta_label='cloud_cover'),
     replace_char = "_",
-    class_text_path='data/texts/fmow_storage_tank.json',
+    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/fmow_plane.json',
     pipeline=test_pipeline)
 
 val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
 
-val_evaluator = dict(_delete_=True, type='CloudMetric', metric='accuracy', is_infer=True)
+val_evaluator = dict(type='OurDOTAMetric', task='task2')
 test_evaluator = val_evaluator
 
 custom_hooks = [

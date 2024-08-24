@@ -13,6 +13,7 @@ from mmengine.logging import print_log
 
 from .yolo_world import YOLOWorldDetector, SimpleYOLOWorldDetector
 from mmrotate.structures.bbox import RotatedBoxes
+from mmdet.structures.bbox import HorizontalBoxes
 from mmengine.structures import InstanceData
 
 @MODELS.register_module()
@@ -50,7 +51,7 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
             results_list = []
             empty_scores = torch.tensor([], device=batch_inputs.device)
             empty_labels = torch.tensor([], device=batch_inputs.device)
-            empty_bboxes = RotatedBoxes(torch.tensor([]), device=batch_inputs.device)
+            empty_bboxes = HorizontalBoxes(torch.tensor([]), device=batch_inputs.device)
             empty_results = InstanceData(scores=empty_scores,
                                         labels=empty_labels,
                                         bboxes=empty_bboxes)
