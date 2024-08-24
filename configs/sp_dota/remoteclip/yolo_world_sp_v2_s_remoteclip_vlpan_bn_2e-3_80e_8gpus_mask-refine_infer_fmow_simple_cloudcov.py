@@ -6,9 +6,9 @@ _base_ = (
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
 num_classes = 1
-# load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_5.pth"
-load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_64.pth"
-embedding_path = "tools/embeddings/remoteclip_fmow_plane.npy"
+load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_5.pth"
+# load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_64.pth"
+embedding_path = "tools/embeddings/remoteclip_fmow_storage_tank.npy"
 cov_thr = 17
 
 # model settings
@@ -72,7 +72,7 @@ dota_val_dataset = dict(
       data_root='data/fMoW',
       meta_label='cloud_cover'),
     replace_char = "_",
-    class_text_path='data/texts/fmow_plane.json',
+    class_text_path='data/texts/fmow_storage_tank.json',
     pipeline=test_pipeline)
 
 val_dataloader = dict(dataset=dota_val_dataset)
