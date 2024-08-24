@@ -11,8 +11,8 @@ load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mas
 # embedding_path = "tools/embeddings/remoteclip_fmow_storage_tank.npy"
 embedding_path = "tools/embeddings/remoteclip_fmow_val_1000_h30_embeddings.npy"
 cov_thr = 17
-# _base_.model_test_cfg.score_thr = 0.3
-# _base_.model.test_cfg.score_thr = 0.3
+# _base_.model_test_cfg.score_thr = 0.01
+# _base_.model.test_cfg.score_thr = 0.01
 # model settings
 model = dict(type='SimpleYOLOWorldDetectorSP',
     cloud_model=dict(type='CloudCoverageHead',
@@ -23,6 +23,7 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
                                       norm_cfg=_base_.norm_cfg,
                                       act_cfg=dict(type='SiLU', inplace=True))),
     with_cloud_model=False,
+    box_type='hbox',
     cov_thr = cov_thr,
     mm_neck=True,
     num_train_classes=_base_.num_training_classes,
