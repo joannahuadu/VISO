@@ -21,6 +21,7 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
     """Implementation of YOLO World Series"""
 
     def __init__(self,
+                 box_type: str = 'rbox',
                  cloud_model: ConfigType = None,
                  with_cloud_model: bool = False,
                  cov_thr: float = 70,
@@ -28,6 +29,7 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
                  **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.with_cloud_model = with_cloud_model
+        self.box_type = box_type
         if self.with_cloud_model:
             if cloud_model is None:
                 raise ValueError("`cloud_model` cannot be None when `with_cloud_model` is True.")
@@ -51,7 +53,10 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
             results_list = []
             empty_scores = torch.tensor([], device=batch_inputs.device)
             empty_labels = torch.tensor([], device=batch_inputs.device)
-            empty_bboxes = HorizontalBoxes(torch.tensor([]), device=batch_inputs.device)
+            if self.box_type=='hbox':
+                empty_bboxes = HorizontalBoxes(torch.tensor([]), device=batch_inputs.device)
+            else:
+                empty_bboxes = RotatedBoxes(torch.tensor([]), device=batch_inputs.device)
             empty_results = InstanceData(scores=empty_scores,
                                         labels=empty_labels,
                                         bboxes=empty_bboxes)
