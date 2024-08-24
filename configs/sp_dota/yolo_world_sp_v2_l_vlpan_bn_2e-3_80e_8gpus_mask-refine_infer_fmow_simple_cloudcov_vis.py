@@ -1,15 +1,18 @@
 _base_ = (
-    '../../val_dota/'
-    'yolo_world_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
+    '../val_dota/'
+    'yolo_world_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
 num_classes = 1
-# load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_5.pth"
-load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_64.pth"
+load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_6.pth"
+# load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_67.pth"
 embedding_path = "tools/embeddings/remoteclip_fmow_plane.npy"
 cov_thr = 17
+
+_base_.model_test_cfg.score_thr = 0.15
+_base_.model.test_cfg.score_thr = 0.15
 
 # model settings
 model = dict(type='SimpleYOLOWorldDetectorSP',
@@ -54,6 +57,7 @@ test_pipeline = [
     dict(
         _scope_='yolo_world',
         type='LoadAnnotations', with_bbox=True, with_cloud=True, box_type='hbox'),
+    dict(type='mmrotate.ConvertBoxType', box_type_mapping=dict(gt_bboxes='rbox')),
     dict(type='LoadText'),
     dict(
         _scope_='yolo_world',
@@ -82,7 +86,21 @@ test_dataloader = val_dataloader
 val_evaluator = dict(_delete_=True, type='CloudMetric', metric='accuracy', is_infer=True)
 test_evaluator = val_evaluator
 
-custom_hooks = [
+# custom_hooks = [
+#     dict(
+#         type='SPHook',
+#     )
+# ]
+
+# _base_.model.neck.mask_vis = True # 这个是画特征图和mask的
+default_hooks = dict(
+    visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook', draw=True, score_thr = 0.000001)) 
+custom_hooks = [ # 加这3个Hook，才能够在推理的时候把mask画出来
+    dict(type='yolo_world.RunnerHook'),
+    dict(type='yolo_world.BatchIdxHook'),
+    dict(type='yolo_world.ClassTextsHook', # 画图时需要知道有哪儿些文本，这个hook提供
+         text_path='data/texts/fmow_plane.json'
+         ), 
     dict(
         type='SPHook',
     )
