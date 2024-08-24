@@ -12,8 +12,19 @@ from ..registry import DATASETS
 
 @DATASETS.register_module()
 class fMoWDataset(BaseDataset): 
+    METAINFO = {
+        'classes':('nuclear_powerplant', 'office_building', 'border_checkpoint', 'interchange', 'amusement_park', 'helipad', 'airport_hangar', 'archaeological_site', 'solar_farm', 'tunnel_opening', 'place_of_worship', 'car_dealership', 'flooded_road', 'aquaculture', 'tower', 'hospital', 'impoverished_settlement', 'space_facility', 'runway', 'surface_mine', 'gas_station', 'fire_station', 'recreational_facility', 'construction_site', 'electric_substation', 'port', 'shopping_mall', 'parking_lot_or_garage', 'swimming_pool', 'burial_site', 'road_bridge', 'race_track', 'waste_disposal', 'airport', 'ground_transportation_station', 'zoo', 'prison', 'shipyard', 'smokestack', 'oil_or_gas_facility', 'fountain', 'storage_tank', 'factory_or_powerplant', 'debris_or_rubble', 'single-unit_residential', 'lighthouse', 'stadium', 'dam', 'police_station', 'toll_booth', 'wind_farm', 'golf_course', 'multi-unit_residential', 'railway_bridge', 'educational_institution', 'airport_terminal', 'park', 'water_treatment_facility', 'lake_or_pond', 'crop_field', 'military_facility', 'barn'),
+        # 'classes':
+        # ('plane', 'baseball-diamond', 'bridge', 'ground-track-field',
+        #  'small-vehicle', 'large-vehicle', 'ship', 'tennis-court',
+        #  'basketball-court', 'storage-tank', 'soccer-ball-field', 'roundabout',
+        #  'harbor', 'swimming-pool', 'helicopter'),
+        # palette is a list of color tuples, which is used for visualization.
+    }
+
     def __init__(self, 
                  data_root: Optional[str] = '',
+                 mode: str = 'val',
                  test_mode: bool = False,
                  meta_label: str = 'cloud_cover',
                  **kwargs) -> None:
@@ -24,10 +35,7 @@ class fMoWDataset(BaseDataset):
             - "cloud_cover"
         '''
         self.meta_label = meta_label
-        if test_mode:
-            self.mode = 'val'
-        else:
-            self.mode = 'train'
+        self.mode = mode
         txt_files = osp.join(data_root, "fMoW_"+self.mode+".json")
         with open(txt_files, "r+", encoding='utf-8') as f:
             self.dict_list=json.load(f)
@@ -39,6 +47,9 @@ class fMoWDataset(BaseDataset):
         Returns:
             List[dict]: A list of annotation.
         """  # noqa: E501
+        cls_map = {c: i
+            for i, c in enumerate(self.metainfo['classes'])
+            }  # i
         data_list = []
 
         for di in self.dict_list:
@@ -56,11 +67,19 @@ class fMoWDataset(BaseDataset):
             instances = []
             instance = {}
             bbox = di["box"]
-            instance['bbox'] = [float(i) for i in bbox]
+            cls_name = di["category"]
+            if cls_name in self.metainfo['classes']:
+                instance['bbox'] = [float(i) for i in bbox]
+                instance['bbox_label'] = cls_map[cls_name]
+                instance['ignore_flag'] = 0
+                instances.append(instance)
+            data_info['instances'] = instances
+            metas = []
+            meta = {}
             if self.meta_label in di:
-                instance[self.meta_label] = di[self.meta_label]
-            
-            data_info['instances'] = [instance]
+                meta[self.meta_label] = di[self.meta_label]
+                metas.append(meta)
+            data_info['metas'] = metas
             data_list.append(data_info)
 
         return data_list
@@ -75,5 +94,5 @@ class fMoWDataset(BaseDataset):
         """
 
         instances = self.get_data_info(idx)['instances']
-        return [instance['cov_scores'] for instance in instances]
+        return [instance['bbox_label'] for instance in instances]
 

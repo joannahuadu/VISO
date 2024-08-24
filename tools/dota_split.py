@@ -37,6 +37,9 @@ PHASE_REQUIRE_SETS = dict(
     test=[
         'test',
     ],
+    example=[
+        'example',
+    ],
 )
 
 
@@ -67,7 +70,7 @@ def parse_args():
         nargs='+',
         default=['trainval', 'test'],
         type=str,
-        choices=['trainval', 'train', 'val', 'test'],
+        choices=['trainval', 'train', 'val', 'test', 'example'],
         help='Phase of the data set to be prepared.')
     parser.add_argument(
         '--nproc', default=8, type=int, help='Number of processes.')
