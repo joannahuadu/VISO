@@ -132,11 +132,13 @@ class LoadAnnotations(MMCV_LoadAnnotations):
             dict: The dict contains loaded bounding box annotations.
         """
         gt_bboxes = []
+        gt_ignore_flags = []
         for instance in results.get('instances', []):
             x1, y1, width, height = instance['bbox']
             x2 = x1 + width
             y2 = y1 + height
             gt_bboxes.append([x1, y1, x2, y2])
+            gt_ignore_flags.append(instance['ignore_flag'])
             # gt_bboxes.append(instance['bbox'])
         if self.box_type is None:
             results['gt_bboxes'] = np.array(
@@ -144,6 +146,7 @@ class LoadAnnotations(MMCV_LoadAnnotations):
         else:
             _, box_type_cls = get_box_type(self.box_type)
             results['gt_bboxes'] = box_type_cls(gt_bboxes, dtype=torch.float32)
+        results['gt_ignore_flags'] = np.array(gt_ignore_flags, dtype=bool)
 
     def _load_labels(self, results: dict) -> None:
         """Private function to load label annotations.

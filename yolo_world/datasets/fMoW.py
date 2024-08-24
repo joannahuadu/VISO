@@ -71,6 +71,7 @@ class fMoWDataset(BaseDataset):
             if cls_name in self.metainfo['classes']:
                 instance['bbox'] = [float(i) for i in bbox]
                 instance['bbox_label'] = cls_map[cls_name]
+                instance['ignore_flag'] = 0
                 instances.append(instance)
             data_info['instances'] = instances
             metas = []
