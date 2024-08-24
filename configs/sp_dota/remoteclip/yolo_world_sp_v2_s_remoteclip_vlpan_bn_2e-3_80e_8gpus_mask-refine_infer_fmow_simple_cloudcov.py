@@ -5,12 +5,14 @@ _base_ = (
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
-num_classes = 1
+num_classes = 59
 load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_5.pth"
 # load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_64.pth"
-embedding_path = "/mnt/data1/workspace/wmq/YOLO-World/tools/embeddings/remoteclip_fmow_storage_tank.npy"
+# embedding_path = "tools/embeddings/remoteclip_fmow_storage_tank.npy"
+embedding_path = "tools/embeddings/remoteclip_fmow_val_1000_h30_embeddings.npy"
 cov_thr = 17
-
+# _base_.model_test_cfg.score_thr = 0.01
+# _base_.model.test_cfg.score_thr = 0.01
 # model settings
 model = dict(type='SimpleYOLOWorldDetectorSP',
     cloud_model=dict(type='CloudCoverageHead',
@@ -20,7 +22,8 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
                                       featmap_strides=_base_.strides,
                                       norm_cfg=_base_.norm_cfg,
                                       act_cfg=dict(type='SiLU', inplace=True))),
-    with_cloud_model=True,
+    with_cloud_model=False,
+    box_type='hbox',
     cov_thr = cov_thr,
     mm_neck=True,
     num_train_classes=_base_.num_training_classes,
@@ -32,7 +35,7 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
     neck=dict(type='YOLOWorldPAFPNSPInfer',
               block_cfg=dict(type='MaxSigmoidCSPLayerWithTwoConvSPInfer', sp_type="vspconv"),
               is_sparse_levels=is_sparse_levels,
-              score_th=0.4,
+              score_th=0.6,
             #   reduce_embed_channels=neck_reduce_embed_channels,
             #   downsample_block_cfg=dict(type='DownSampleConvSPInfer', sp_type="spconv"),
               reduce_num_heads=neck_reduce_num_heads,
@@ -67,12 +70,12 @@ dota_val_dataset = dict(
       _delete_=True,
       _scope_='yolo_world',
       type='fMoWDataset',
-      mode='storage_tank',
+      mode='val_1000_h30',
       test_mode = True,
-      data_root='/mnt/data1/workspace/wmq/YOLO-World/data/fMoW',
+      data_root='data/fMoW',
       meta_label='cloud_cover'),
     replace_char = "_",
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/fmow_storage_tank.json',
+    class_text_path='data/texts/fmow_val_1000_h30_texts.json',
     pipeline=test_pipeline)
 
 val_dataloader = dict(dataset=dota_val_dataset)
