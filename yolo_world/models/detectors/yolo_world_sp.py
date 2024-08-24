@@ -124,10 +124,10 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
             cloud_cov = self.cloud_model.predict(img_feats,
                                                 batch_data_samples)
             pred_score = cloud_cov[0]['scores']
-            print_log(
-                    f'{batch_data_samples[0].img_path}: {pred_score}.',
-                    logger='current',
-                    level=logging.INFO)
+            # print_log(
+            #         f'{batch_data_samples[0].img_path}: {pred_score}.',
+            #         logger='current',
+            #         level=logging.INFO)
             if pred_score > self.cov_thr:
                 return None, None, pred_score
         
