@@ -9,6 +9,7 @@ import logging
 from collections import OrderedDict, defaultdict
 from typing import List, Optional, Sequence, Union
 
+import json
 import numpy as np
 import torch
 from mmcv.ops import nms_quadri, nms_rotated
@@ -110,20 +111,20 @@ class UTMMetric(BaseMetric):
         for gt, pred in zip(gts, preds):
             utm = gt['utms'][0]  # Assuming 'utms' is the utm key we want to store
             text = gt['texts'][0]  # Assuming 'texts' is a string, e.g., 'plane'
-            utm_attns_1 = pred['utm_attns_1']
-            utm_attns_2 = pred['utm_attns_2']
-            utm_attns_3 = pred['utm_attns_3']
+            utm_attns_1 = pred['utm_attns_1'].max()
+            utm_attns_2 = pred['utm_attns_2'].max()
+            utm_attns_3 = pred['utm_attns_3'].max()
 
             # Initialize storage for each utm and text if not already done
             if utm not in attns_dict:
                 attns_dict[utm] = {}
             if text not in attns_dict[utm]:
-                attns_dict[utm][text] = {'utm_attns_1': [], 'utm_attns_2': [], 'utm_attns_3': []}
+                attns_dict[utm][text] = {'utm_attns_1': 0, 'utm_attns_2': 0, 'utm_attns_3': 0}
             
             # Append current attns to corresponding list
-            attns_dict[utm][text]['utm_attns_1'].append(utm_attns_1)
-            attns_dict[utm][text]['utm_attns_2'].append(utm_attns_2)
-            attns_dict[utm][text]['utm_attns_3'].append(utm_attns_3)
+            attns_dict[utm][text]['utm_attns_1'] = np.maximum(attns_dict[utm][text]['utm_attns_1'], utm_attns_1)
+            attns_dict[utm][text]['utm_attns_2'] = np.maximum(attns_dict[utm][text]['utm_attns_2'], utm_attns_2)
+            attns_dict[utm][text]['utm_attns_3'] = np.maximum(attns_dict[utm][text]['utm_attns_3'], utm_attns_3)
 
         # Initialize final metrics dictionary
         metrics_dict = {}
@@ -133,14 +134,16 @@ class UTMMetric(BaseMetric):
             metrics_dict[utm] = {}
             print_log(f"utm: {utm}", logger='current', level=logging.INFO)
             for text, attns in texts.items():
-                print_log(f"{text}: {len(attns['utm_attns_1'])}", logger='current', level=logging.INFO)
+                # print_log(f"{text}: {len(attns['utm_attns_1'])}", logger='current', level=logging.INFO)
                 # utm_attns_1_mean = sum(attns['utm_attns_1']) / len(attns['utm_attns_1'])
                 # utm_attns_2_mean = sum(attns['utm_attns_2']) / len(attns['utm_attns_2'])
                 # utm_attns_3_mean = sum(attns['utm_attns_3']) / len(attns['utm_attns_3'])
-                utm_attns_1_max = np.max(np.stack(attns['utm_attns_1'], axis=0), axis=0)
-                utm_attns_2_max = np.max(np.stack(attns['utm_attns_2'], axis=0), axis=0)
-                utm_attns_3_max = np.max(np.stack(attns['utm_attns_3'], axis=0), axis=0)
-                
+                # utm_attns_1_max = np.max(np.stack(attns['utm_attns_1'], axis=0), axis=0)
+                # utm_attns_2_max = np.max(np.stack(attns['utm_attns_2'], axis=0), axis=0)
+                # utm_attns_3_max = np.max(np.stack(attns['utm_attns_3'], axis=0), axis=0)
+                utm_attns_1_max = attns['utm_attns_1']
+                utm_attns_2_max = attns['utm_attns_2']
+                utm_attns_3_max = attns['utm_attns_3']                
                 metrics_dict[utm][text] = [utm_attns_1_max, utm_attns_2_max, utm_attns_3_max]
         assert len(self.utm_path) > 0,  "The `utm_path` must not be empty."
         utm_dir = os.path.dirname(self.utm_path)
@@ -149,7 +152,9 @@ class UTMMetric(BaseMetric):
             print(f"Directory '{utm_dir}' created.")
         else:
             print(f"Directory '{utm_dir}' already exists.")
-        torch.save(metrics_dict, self.utm_path)
+        # torch.save(metrics_dict, self.utm_path)
+        with open(self.utm_path, 'w') as f:
+            json.dump(metrics_dict, f, indent=4)  # indent=4 for better readability
         
         eval_results = OrderedDict()
 
