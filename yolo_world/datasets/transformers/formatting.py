@@ -117,11 +117,13 @@ class PackDetInputs(MMDET_PackDetInputs):
 class LoadAnnotations(MMCV_LoadAnnotations):
     def __init__(self,
                  with_cloud: bool = False,
+                 with_utm: bool = False,
                  box_type: str = None,
                  **kwargs) -> None:
         super(LoadAnnotations, self).__init__(**kwargs)
         self.with_cloud = with_cloud
         self.box_type = box_type
+        self.with_utm = with_utm
     
     def _load_bboxes(self, results: dict) -> None:
         """Private function to load bounding box annotations.
@@ -178,6 +180,19 @@ class LoadAnnotations(MMCV_LoadAnnotations):
         results['gt_scores'] = np.array(
             gt_scores, dtype=np.float32)
     
+    def _load_utms(self, results: dict) -> None:
+        """Private function to load bounding box annotations.
+
+        Args:
+            results (dict): Result dict from :obj:``mmengine.BaseDataset``.
+        Returns:
+            dict: The dict contains loaded bounding box annotations.
+        """
+        gt_utms = []
+        for instance in results.get('metas', []):
+            gt_utms.append(instance['utm'])
+        results['utms'] = gt_utms
+    
     def transform(self, results: dict) -> dict:
         """Function to load multiple types annotations.
 
@@ -195,4 +210,6 @@ class LoadAnnotations(MMCV_LoadAnnotations):
             self._load_labels(results)
         if self.with_cloud:
             self._load_scores(results)
+        if self.with_utm:
+            self._load_utms(results)
         return results

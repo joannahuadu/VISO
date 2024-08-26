@@ -305,3 +305,28 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
             results.append(out_attns[idx])
             
         return tuple(results)
+    
+@MODELS.register_module()
+class YOLOWorldPAFPNUTMSP(YOLOWorldPAFPNSP):
+    """
+    """
+    def __init__(self,
+                 *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    def forward(self, img_feats: List[Tensor], txt_feats: Tensor = None) -> tuple:
+        """Forward function.
+        including multi-level image features, text features: BxLxD
+        """
+        assert len(img_feats) == len(self.in_channels)
+        # reduce layers
+        reduce_outs = []
+        for idx in range(len(self.in_channels)):
+            reduce_outs.append(self.reduce_layers[idx](img_feats[idx], txt_feats))
+
+        # add reduce_outs_attn
+        results = []
+        for idx in range(len(self.in_channels)):
+            results.append(reduce_outs[idx][1])
+            
+        return tuple(results)

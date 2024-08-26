@@ -18,8 +18,9 @@ class YOLOWDetDataPreprocessor(DetDataPreprocessor):
     Note: It must be used together with `mmyolo.datasets.utils.yolow_collate`
     """
 
-    def __init__(self, *args, non_blocking: Optional[bool] = True, **kwargs):
+    def __init__(self, with_utm: bool = False, *args, non_blocking: Optional[bool] = True, **kwargs):
         super().__init__(*args, non_blocking=non_blocking, **kwargs)
+        self.with_utm = with_utm
 
     def forward(self, data: dict, training: bool = False) -> dict:
         """Perform normalization, padding and bgr2rgb conversion based on
@@ -50,11 +51,19 @@ class YOLOWDetDataPreprocessor(DetDataPreprocessor):
                 inputs, data_samples = batch_aug(inputs, data_samples)
 
         img_metas = [{'batch_input_shape': inputs.shape[2:]}] * len(inputs)
-        data_samples_output = {
-            'bboxes_labels': data_samples['bboxes_labels'],
-            'texts': data_samples['texts'],
-            'img_metas': img_metas
-        }
+        if self.with_utm:
+            data_samples_output = {
+                'bboxes_labels': data_samples['bboxes_labels'],
+                'texts': data_samples['texts'],
+                'utms': data_samples['utms'],
+                'img_metas': img_metas
+            }
+        else:
+            data_samples_output = {
+                'bboxes_labels': data_samples['bboxes_labels'],
+                'texts': data_samples['texts'],
+                'img_metas': img_metas
+            }
         if 'masks' in data_samples:
             data_samples_output['masks'] = data_samples['masks']
         if 'is_detection' in data_samples:
