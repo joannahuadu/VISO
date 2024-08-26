@@ -12,8 +12,7 @@ from mmyolo.registry import MODELS
 from mmengine.logging import print_log
 
 from .yolo_world import YOLOWorldDetector, SimpleYOLOWorldDetector
-from mmrotate.structures.bbox import RotatedBoxes
-from mmdet.structures.bbox import HorizontalBoxes
+from mmdet.structures.bbox import get_box_type
 from mmengine.structures import InstanceData
 
 @MODELS.register_module()
@@ -22,6 +21,8 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
 
     def __init__(self,
                  box_type: str = 'rbox',
+                 utm_path: str = '',
+                 with_utm: bool = False,
                  cloud_model: ConfigType = None,
                  with_cloud_model: bool = False,
                  cov_thr: float = 70,
@@ -29,6 +30,7 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
                  **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.with_cloud_model = with_cloud_model
+        self.with_utm = with_utm
         self.box_type = box_type
         if self.with_cloud_model:
             if cloud_model is None:
@@ -38,6 +40,10 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
         else:
             self.cloud_model = None
             self.cov_thr = None
+        if self.with_utm:
+            assert len(utm_path) > 0, "utm_path cannot be empty if `with_utm` is enabled."
+            self.utm_attns = torch.load(utm_path)
+            self.score_th = self.neck.score_th
 
     def predict(self,
                 batch_inputs: Tensor,
@@ -46,17 +52,34 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
         """Predict results from a batch of inputs and data samples with post-
         processing.
         """
-
+        if self.with_utm:
+            utm = batch_data_samples['data_samples']['gt_utm']
+            utm_attns = self.utm_attns[utm]
+            early_quit = 0
+            for idx in range(len(utm_attns)):
+                early_quit+=torch.where(utm_attns[idx].view(-1) > self.score_th)[0].shape[0]
+            if early_quit == 0:
+                results_list = []
+                empty_scores = torch.tensor([], device=batch_inputs.device)
+                empty_labels = torch.tensor([], device=batch_inputs.device)
+                _, box_type_cls = get_box_type(self.box_type)
+                empty_bboxes = box_type_cls(torch.tensor([]), device=batch_inputs.device)
+                empty_results = InstanceData(scores=empty_scores,
+                                            labels=empty_labels,
+                                            bboxes=empty_bboxes)
+                results_list.append(empty_results)
+                batch_data_samples = self.add_pred_to_datasample(
+                    batch_data_samples, results_list)
+                return batch_data_samples
+        
         img_feats, txt_feats, pred_score = self.extract_feat(batch_inputs,
                                                  batch_data_samples)
         if img_feats is None:
             results_list = []
             empty_scores = torch.tensor([], device=batch_inputs.device)
             empty_labels = torch.tensor([], device=batch_inputs.device)
-            if self.box_type=='hbox':
-                empty_bboxes = HorizontalBoxes(torch.tensor([]), device=batch_inputs.device)
-            else:
-                empty_bboxes = RotatedBoxes(torch.tensor([]), device=batch_inputs.device)
+            _, box_type_cls = get_box_type(self.box_type)
+            empty_bboxes = box_type_cls(torch.tensor([]), device=batch_inputs.device)
             empty_results = InstanceData(scores=empty_scores,
                                         labels=empty_labels,
                                         bboxes=empty_bboxes)
