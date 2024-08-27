@@ -3,6 +3,8 @@ from typing import List, Tuple, Union
 import torch
 import torch.nn as nn
 import logging
+import json
+import numpy as np
 from torch import Tensor
 from mmdet.structures import OptSampleList, SampleList
 from mmdet.utils import ConfigType, InstanceList
@@ -42,8 +44,9 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
             self.cov_thr = None
         if self.with_utm:
             assert len(utm_path) > 0, "utm_path cannot be empty if `with_utm` is enabled."
-            self.utm_attns = torch.load(utm_path)
-            self.score_th = self.neck.score_th
+            with open(utm_path, 'r', encoding='utf-8') as file:
+                self.utm_attns = json.load(file)
+            self.score_th = self.utm_attns['threshold']
 
     def predict(self,
                 batch_inputs: Tensor,
@@ -53,24 +56,23 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
         processing.
         """
         if self.with_utm:
-            utm = batch_data_samples['data_samples']['gt_utm']
-            utm_attns = self.utm_attns[utm]
-            early_quit = 0
-            for idx in range(len(utm_attns)):
-                early_quit+=torch.where(utm_attns[idx].view(-1) > self.score_th)[0].shape[0]
-            if early_quit == 0:
-                results_list = []
-                empty_scores = torch.tensor([], device=batch_inputs.device)
-                empty_labels = torch.tensor([], device=batch_inputs.device)
-                _, box_type_cls = get_box_type(self.box_type)
-                empty_bboxes = box_type_cls(torch.tensor([]), device=batch_inputs.device)
-                empty_results = InstanceData(scores=empty_scores,
-                                            labels=empty_labels,
-                                            bboxes=empty_bboxes)
-                results_list.append(empty_results)
-                batch_data_samples = self.add_pred_to_datasample(
-                    batch_data_samples, results_list)
-                return batch_data_samples
+            utm = batch_data_samples[0].utms[0]
+            text = batch_data_samples[0].texts[0]
+            if utm in self.utm_attns:
+                utm_attns = self.utm_attns[utm][text]
+                if np.mean(utm_attns) < self.score_th:
+                    results_list = []
+                    empty_scores = torch.tensor([], device=batch_inputs.device)
+                    empty_labels = torch.tensor([], device=batch_inputs.device)
+                    _, box_type_cls = get_box_type(self.box_type)
+                    empty_bboxes = box_type_cls(torch.tensor([]), device=batch_inputs.device)
+                    empty_results = InstanceData(scores=empty_scores,
+                                                labels=empty_labels,
+                                                bboxes=empty_bboxes)
+                    results_list.append(empty_results)
+                    batch_data_samples = self.add_pred_to_datasample(
+                        batch_data_samples, results_list)
+                    return batch_data_samples
         
         img_feats, txt_feats, pred_score = self.extract_feat(batch_inputs,
                                                  batch_data_samples)
