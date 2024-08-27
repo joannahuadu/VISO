@@ -5,14 +5,21 @@ _base_ = (
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
-num_classes = 59
-load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_5.pth"
+num_classes = 1
+load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_5.pth"
 # load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_64.pth"
-# embedding_path = "tools/embeddings/remoteclip_fmow_storage_tank.npy"
-embedding_path = "tools/embeddings/remoteclip_fmow_val_1000_h30_embeddings.npy"
+
+dataset_name = "fmow"
+task = "wind_farm"
+work_dir = f"work_dirs/example/remoteclip/cloud_{dataset_name}_{task}"
+embedding_path = f"tools/embeddings/remoteclip_{dataset_name}_{task}.npy"
+class_text_path=f'data/texts/{dataset_name}_{task}.json'
+# embedding_path = "tools/embeddings/remoteclip_fmow_val_1000_h30_embeddings.npy"
+# class_text_path = "data/texts/fmow_val_1000_h30_texts.json"
 cov_thr = 17
-# _base_.model_test_cfg.score_thr = 0.01
-# _base_.model.test_cfg.score_thr = 0.01
+_base_.model_test_cfg.score_thr = 0.01
+_base_.model.test_cfg.score_thr = 0.01
+_base_.model_test_cfg.nms = dict(type='nms', iou_threshold=0.1)
 # model settings
 model = dict(type='SimpleYOLOWorldDetectorSP',
     cloud_model=dict(type='CloudCoverageHead',
@@ -75,7 +82,7 @@ dota_val_dataset = dict(
       data_root='data/fMoW',
       meta_label='cloud_cover'),
     replace_char = "_",
-    class_text_path='data/texts/fmow_val_1000_h30_texts.json',
+    class_text_path=class_text_path,
     pipeline=test_pipeline)
 
 val_dataloader = dict(dataset=dota_val_dataset)
