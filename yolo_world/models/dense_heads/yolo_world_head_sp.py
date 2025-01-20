@@ -188,15 +188,15 @@ class YOLOWorldHeadSP(YOLOWorldHead):
                     loss_mask = loss_mask * num_imgs * world_size)
 
     def get_mask_gt(self, gt_bboxes, featmap_sizes, featmap_strides):
-        '''
-        input:
-        gt_bboxes: [batch, num_pred, 4] xyxy
-        featmap_sizes: Sequence[tuple(H, W)], len(seq)=num_levels
-        featmap_strides: Sequence[int], len(seq)=num_levels
-
-        output:
-        mask_gt: list([batch, 1, H, W]), len(list)=num_levels
-        '''
+        """
+        generate mask ground truth for each level from gt_bboxes
+        Args:
+            gt_bboxes: [batch, num_pred, 4] xyxy
+            featmap_sizes: Sequence[tuple(H, W)], len(seq)=num_levels
+            featmap_strides: Sequence[int], len(seq)=num_levels
+        Returns:
+            mask_gt: list([batch, 1, H, W]), len(list)=num_levels
+        """
         batch_size, num_pred, _ = gt_bboxes.shape
         device = gt_bboxes.device
         num_levels = len(featmap_sizes)
@@ -223,13 +223,11 @@ class YOLOWorldHeadSP(YOLOWorldHead):
 
     def cal_loss_mask(self, attn_preds, mask_gt):
         '''
-        计算mask loss, 使用二元交叉熵损失(BCE loss)
-        
-        input:
-        attn_preds: list([batch, 1, H, W]), len(list)=num_levels
-        mask_gt: list([batch, 1, H, W]), len(list)=num_levels
-        
-        output:
+        Calculate the loss of mask prediction for each level of the model using binary cross entropy loss.
+        Args:
+            attn_preds: list([batch, 1, H, W]), len(list)=num_levels
+            mask_gt: list([batch, 1, H, W]), len(list)=num_levels
+        Returns:
         loss_mask: tensor[1]
         '''
         num_levels = len(attn_preds)
@@ -241,7 +239,7 @@ class YOLOWorldHeadSP(YOLOWorldHead):
             target = mask_gt[level]
             
             assert pred.shape[2:] == target.shape[2:]
-            target = target.sum(dim=1, keepdim=True).clamp(0, 1) # 这个不需要
+            target = target.sum(dim=1, keepdim=True).clamp(0, 1)
             
             loss = F.binary_cross_entropy(pred, target, reduction='mean')
             
