@@ -4,7 +4,7 @@ custom_imports = dict(imports=['yolo_world'],
                       allow_failed_imports=False)
 
 # hyper-parameters
-num_classes = 15
+num_classes = 18
 num_training_classes = 37
 max_epochs = 20  # Maximum training epochs ## TODO
 close_mosaic_epochs = 10
@@ -15,6 +15,7 @@ neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
 base_lr = 2e-4 ## TODO
 weight_decay = 0.025 ## TODO
 train_batch_size_per_gpu = 2
+val_batch_size_per_gpu = 8
 load_from = "/mnt/data1/workspace/wmq/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
 text_model_name = 'openai/clip-vit-base-patch32'
@@ -334,7 +335,7 @@ dota_val_dataset = dict(
         batch_shapes_cfg=None),
     class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v2_class_texts.json',
     pipeline=test_pipeline)
-val_dataloader = dict(dataset=dota_val_dataset)
+val_dataloader = dict(batch_size=val_batch_size_per_gpu, dataset=dota_val_dataset)
 test_dataloader = val_dataloader
 
 val_evaluator = dict(_delete_=True, type='mmrotate.DOTAMetric', metric='mAP')
@@ -357,7 +358,7 @@ custom_hooks = [
     #      switch_pipeline=train_pipeline_stage2)
 ]
 train_cfg = dict(max_epochs=max_epochs,
-                 val_interval=10,
+                 val_interval=20,
                  dynamic_intervals=[((max_epochs - close_mosaic_epochs),
                                      _base_.val_interval_stage2)])
 optim_wrapper = dict(optimizer=dict(

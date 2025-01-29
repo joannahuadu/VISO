@@ -1,6 +1,7 @@
 # Copyright (c) Tencent Inc. All rights reserved.
 from .mm_dataset import (
     MultiModalDataset, MultiModalMixedDataset)
+from .mm_vg_dataset import VisualGroundingDataset
 from .yolov5_obj365v1 import YOLOv5Objects365V1Dataset
 from .yolov5_obj365v2 import YOLOv5Objects365V2Dataset
 from .yolov5_mixed_grounding import YOLOv5MixedGroundingDataset
@@ -15,5 +16,6 @@ __all__ = [
     'YOLOv5Objects365V2Dataset', 'YOLOv5MixedGroundingDataset',
     'YOLOv5V3DetDataset', 'yolow_collate', 'yoloc_collate',
     'YOLOv5LVISV1Dataset', 'MultiModalMixedDataset',
-    'YOLOv5DOTADataset', 'fMoWDataset'
+    'YOLOv5DOTADataset', 'fMoWDataset',
+    'VisualGroundingDataset'
 ]
