@@ -300,7 +300,7 @@ test_pipeline = [
     #     pad_val=dict(img=114)),
     dict(type='mmdet.LoadAnnotations', with_bbox=True, box_type='qbox'),
     dict(type='mmrotate.ConvertBoxType', box_type_mapping=dict(gt_bboxes='rbox')),
-    dict(type='LoadText'),
+    dict(type='LoadText', prompt_format='find the {}'),
     dict(
         type='mmdet.PackDetInputs',
         meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape',
@@ -313,7 +313,7 @@ dota_val_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='data/split_ss_dota/',
+        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dota/',
         test_mode=True,
         ann_file='trainval/annfiles/',
         data_prefix=dict(img_path='trainval/images/'),
