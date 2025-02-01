@@ -15,6 +15,7 @@ neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
 base_lr = 2e-4 ## TODO
 weight_decay = 0.025 ## TODO
 train_batch_size_per_gpu = 2
+val_batch_size_per_gpu = 8
 load_from = "/mnt/data1/workspace/wmq/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
 text_model_name = 'openai/clip-vit-base-patch32'
@@ -285,20 +286,19 @@ rsvg_train_dataset = dict(type='VisualGroundingDataset',
                         # filter_cfg=dict(filter_empty_gt=False, min_size=32),
                         pipeline=train_pipeline)
 
-
 train_dataloader = dict(batch_size=train_batch_size_per_gpu,
                         collate_fn=dict(type='yolow_collate'),
                         dataset=dict(_delete_=True,
                                      type='ConcatDataset',
                                      datasets=[
-                                        #  dotav2_train_dataset,
+                                         dotav2_train_dataset,
                                          dior_train_dataset,
-                                        #  fairv2_train_dataset,
+                                         fairv2_train_dataset,
                                          nwpuvhr10_train_dataset,
-                                        #  ucasaod_train_dataset,
-                                        #  rsod_train_dataset,
-                                        #  hrrsd_train_dataset,
-                                        #  visdrone_train_dataset,
+                                         ucasaod_train_dataset,
+                                         rsod_train_dataset,
+                                         hrrsd_train_dataset,
+                                         visdrone_train_dataset,
                                          rsvg_train_dataset
                                      ],
                                      ignore_keys=['classes', 'palette']))
@@ -331,7 +331,7 @@ dota_val_dataset = dict(
         batch_shapes_cfg=None),
     class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v2_class_texts.json',
     pipeline=test_pipeline)
-val_dataloader = dict(dataset=dota_val_dataset)
+val_dataloader = dict(batch_size=val_batch_size_per_gpu, dataset=dota_val_dataset)
 test_dataloader = val_dataloader
 
 val_evaluator = dict(_delete_=True, type='mmrotate.DOTAMetric', metric='mAP')
