@@ -127,5 +127,4 @@ work_dirs_old
 # venus
 venus_run.sh
 
-
-/mnt/data1/workspace/data/data/
+./data
