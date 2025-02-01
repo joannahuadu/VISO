@@ -349,6 +349,7 @@ custom_hooks = [
          update_buffers=True,
          strict_load=False,
          priority=49),
+    dict(type='EmptyCacheHook'),
     # dict(type='mmdet.PipelineSwitchHook',
     #      switch_epoch=max_epochs - close_mosaic_epochs,
     #      switch_pipeline=train_pipeline_stage2)
