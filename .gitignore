@@ -128,3 +128,5 @@ work_dirs_old
 venus_run.sh
 
 ./data
+jobs/*
+configs/*

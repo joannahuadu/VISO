@@ -14,9 +14,9 @@ neck_embed_channels = [128, 256, _base_.last_stage_out_channels // 2]
 neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
 base_lr = 2e-4 ## TODO
 weight_decay = 0.025 ## TODO
-train_batch_size_per_gpu = 2
-val_batch_size_per_gpu = 8
-load_from = "/mnt/data1/workspace/wmq/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
+train_batch_size_per_gpu = 6
+val_batch_size_per_gpu = 24
+load_from = "/home/fit/qiuhan/WORK/wmq/aerial-ov-detection/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
 text_model_name = 'openai/clip-vit-base-patch32'
 ## TODO
@@ -31,6 +31,8 @@ loss_cls_weight = 1.0
 loss_bbox_weight = 2.0
 loss_dfl_weight = 1.5 / 4
 qfl_beta = 2.0  # beta of QualityFocalLoss
+
+train_num_workers = 8
 
 model_test_cfg = dict(
     # The config of multi-label for multi-class prediction.
@@ -161,12 +163,12 @@ dotav2_train_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dotav2_1024_500/',
-        ann_file='train/annfiles/', ## TODO
-        data_prefix=dict(img_path='train/images/'), ## TODO
+        data_root='/home/fit/qiuhan/data/split_ss_dotav2_1024_500/',
+        ann_file='trainval/annfiles/', ## TODO
+        data_prefix=dict(img_path='trainval/images/'), ## TODO
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v2_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/dota_v2_class_texts.json',
     pipeline=train_pipeline)
 
 dior_train_dataset = dict(
@@ -175,14 +177,14 @@ dior_train_dataset = dict(
         # metainfo=DIOR_METAINFO,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/dior/',
+        data_root='/home/fit/qiuhan/data/dior/',
         ann_file='all/annfiles/',
         img_suffix='jpg',
         data_prefix=dict(img_path='all/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
     replace_char = "",
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dior_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/dior_class_texts.json',
     pipeline=train_pipeline)
 
 
@@ -192,13 +194,13 @@ fairv2_train_dataset = dict(
         # metainfo=FAIR_METAINFO,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_fairv2_1024_500/',
+        data_root='/home/fit/qiuhan/data/split_ss_fairv2_1024_500/',
         ann_file='trainval/annfiles/',
         img_suffix='tif',
         data_prefix=dict(img_path='trainval/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/fairv2_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/fairv2_class_texts.json',
     pipeline=train_pipeline)
 
 nwpuvhr10_train_dataset = dict(
@@ -207,13 +209,13 @@ nwpuvhr10_train_dataset = dict(
         # metainfo=FAIR_METAINFO,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_nwpuvhr10_1024_500/',
+        data_root='/home/fit/qiuhan/data/split_ss_nwpuvhr10_1024_500/',
         ann_file='train/annfiles/',
         img_suffix='jpg',
         data_prefix=dict(img_path='train/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/nwpuvhr10_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/nwpuvhr10_class_texts.json',
     pipeline=train_pipeline)
 
 ucasaod_train_dataset = dict(
@@ -222,12 +224,12 @@ ucasaod_train_dataset = dict(
         # metainfo=FAIR_METAINFO,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_ucasaod_1024_500/',
+        data_root='/home/fit/qiuhan/data/split_ss_ucasaod_1024_500/',
         ann_file='train/annfiles/',
         data_prefix=dict(img_path='train/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/ucasaod_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/ucasaod_class_texts.json',
     pipeline=train_pipeline)
 
 rsod_train_dataset = dict(
@@ -236,13 +238,13 @@ rsod_train_dataset = dict(
         # metainfo=FAIR_METAINFO,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_rsod_1024_500/',
+        data_root='/home/fit/qiuhan/data/split_ss_rsod_1024_500/',
         ann_file='train/annfiles/',
         img_suffix='jpg',
         data_prefix=dict(img_path='train/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/rsod_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/rsod_class_texts.json',
     pipeline=train_pipeline)
 
 hrrsd_train_dataset = dict(
@@ -251,13 +253,13 @@ hrrsd_train_dataset = dict(
         # metainfo=FAIR_METAINFO,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_hrrsd_1024_500/',
+        data_root='/home/fit/qiuhan/data/split_ss_hrrsd_1024_500/',
         ann_file='train/annfiles/',
         img_suffix='jpg',
         data_prefix=dict(img_path='train/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/hrrsd_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/hrrsd_class_texts.json',
     pipeline=train_pipeline)
 
 visdrone_train_dataset = dict(
@@ -266,18 +268,18 @@ visdrone_train_dataset = dict(
         # metainfo=FAIR_METAINFO,
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_visdrone_1024_500/',
+        data_root='/home/fit/qiuhan/data/split_ss_visdrone_1024_500/',
         ann_file='trainval/annfiles/',
         img_suffix='jpg',
         data_prefix=dict(img_path='trainval/images/'),
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/visdrone_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/visdrone_class_texts.json',
     pipeline=train_pipeline)
 
 ## TODO: RSVG
 rsvg_train_dataset = dict(type='VisualGroundingDataset',
-                        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/refGeo/',
+                        data_root='/home/fit/qiuhan/data/refGeo/',
                         ann_file='metainfo/',
                         # datasets=['dior_rsvg', 'geochat', 'rrsisd', 'rsvg', 'vrsbench'],
                         datasets=['dior_rsvg', 'geochat', 'rrsisd', 'vrsbench'],
@@ -287,6 +289,7 @@ rsvg_train_dataset = dict(type='VisualGroundingDataset',
                         pipeline=train_pipeline)
 
 train_dataloader = dict(batch_size=train_batch_size_per_gpu,
+                        num_workers=train_num_workers,
                         collate_fn=dict(type='yolow_collate'),
                         dataset=dict(_delete_=True,
                                      type='ConcatDataset',
@@ -324,12 +327,12 @@ dota_val_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
-        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dotav2_1024_500/',
+        data_root='/home/fit/qiuhan/data/split_ss_dotav2_1024_500/',
         test_mode=True,
         ann_file='val/annfiles/',
         data_prefix=dict(img_path='val/images/'),
         batch_shapes_cfg=None),
-    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v2_class_texts.json',
+    class_text_path='/home/fit/qiuhan/data/texts/dota_v2_class_texts.json',
     pipeline=test_pipeline)
 val_dataloader = dict(batch_size=val_batch_size_per_gpu, dataset=dota_val_dataset)
 test_dataloader = val_dataloader
