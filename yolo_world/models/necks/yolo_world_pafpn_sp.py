@@ -268,6 +268,21 @@ class YOLOWorldPAFPNSPInfer(YOLOWorldPAFPN):
             else:
                 top_down_layer_inputs, inner_attn = _concat(feat_low, upsample_feat, self.is_sparse_levels[idx - 1])
                 # top_down_layer_inputs = torch.cat([feat_low, upsample_feat], 1)
+                    # # 把mask保存到npy文件中
+            
+            # if idx == 2:
+            #     save_path = 'paper_pic/feature_mask'
+            #     import numpy as np
+            #     import os
+            #     if not os.path.exists(save_path):
+            #         os.makedirs(save_path)
+            #     id = 0
+            #     # 看看当前保存的mask用到了多少个，然后顺序添加id
+            #     while os.path.exists(f'{save_path}/mask_{id}_{self.score_th}.npy'):
+            #         id += 1
+            #     np.save(f'{save_path}/mask_{id}_{self.score_th}.npy', inner_attn.cpu().numpy())
+                
+        
             if inner_attn.shape[0] == 0 and self.is_sparse_levels[idx - 1]==1:
                 return None
             inner_out = self.top_down_layers[len(self.in_channels) - 1 - idx](

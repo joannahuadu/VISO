@@ -6,6 +6,7 @@ _base_.model.neck.mask_vis = True
 default_hooks = dict(
     visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook', draw=True))
 custom_hooks = [
-    dict(type='yolo_world.RunnerHook'),
-    dict(type='yolo_world.BatchIdxHook'),
+    dict(type='yolo_world.VisInfoHook',
+        text_path=class_text_path
+        ), 
 ]
