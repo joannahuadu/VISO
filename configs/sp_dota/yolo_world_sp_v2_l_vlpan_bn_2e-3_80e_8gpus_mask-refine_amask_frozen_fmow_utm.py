@@ -12,7 +12,7 @@ task = "storage_tank"
 work_dir = f"work_dirs/utm/{dataset_name}_{task}"
 embedding_path = f"/mnt/data1/workspace/wmq/YOLO-World/tools/embeddings/clip_{dataset_name}_{task}.npy"
 class_text_path=f'/mnt/data1/workspace/wmq/YOLO-World/data/texts/{dataset_name}_{task}.json'
-utm_path = f'/mnt/data1/workspace/wmq/YOLO-World/tools/utm_prototype/{dataset_name}_all_{task}.json'
+utm_path = f'/mnt/data1/workspace/wmq/YOLO-World/tools/utm_prototype/{dataset_name}_all_{task}_update.json'
 # model settings
 model = dict(type='UTMAttnCollector',
     mm_neck=True,
@@ -49,7 +49,7 @@ dota_val_dataset = dict(
       _delete_=True,
       _scope_='yolo_world',
       type='fMoWDataset',
-      mode=f'train_{task}',
+      mode=f'train_all_update',
       test_mode = True,
       data_root='/mnt/data1/workspace/wmq/YOLO-World/data/fMoW',
       meta_label='utm'),

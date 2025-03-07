@@ -10,9 +10,9 @@ load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_fi
 dataset_name = "fmow"
 task = "storage_tank"
 work_dir = f"work_dirs/utm/{dataset_name}_{task}"
-embedding_path = f"/mnt/data1/workspace/wmq/YOLO-World/tools/embeddings/clip_{dataset_name}_{task}.npy"
-class_text_path=f'/mnt/data1/workspace/wmq/YOLO-World/data/texts/{dataset_name}_{task}.json'
-utm_path = f'/mnt/data1/workspace/wmq/YOLO-World/tools/utm_prototype/{dataset_name}_all_{task}.json'
+embedding_path = f"tools/embeddings/clip_{dataset_name}_{task}.npy"
+class_text_path=f'data/texts/{dataset_name}_{task}.json'
+utm_path = f'tools/utm_prototype/{dataset_name}_all_{task}.json'
 # model settings
 model = dict(type='SimpleYOLOWorldDetectorSP',
     with_utm = True,
@@ -62,7 +62,7 @@ dota_val_dataset = dict(
       type='fMoWDataset',
       mode='val_random_2000',
       test_mode = True,
-      data_root=f'/mnt/data1/workspace/wmq/YOLO-World/data/fMoW_utm/{task}',
+      data_root=f'data/fMoW_utm/{task}',
       meta_label='utm'),
     replace_char = "_",
     class_text_path=class_text_path,

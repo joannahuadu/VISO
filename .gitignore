@@ -126,3 +126,5 @@ work_dirs_old
 
 # venus
 venus_run.sh
+
+./data
