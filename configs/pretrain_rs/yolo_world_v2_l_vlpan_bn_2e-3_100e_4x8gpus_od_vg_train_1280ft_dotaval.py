@@ -15,7 +15,7 @@ neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
 base_lr = 2e-4 ## TODO
 weight_decay = 0.025 ## TODO
 train_batch_size_per_gpu = 2
-val_batch_size_per_gpu = 8
+val_batch_size_per_gpu = 1
 load_from = "/mnt/data1/workspace/wmq/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
 text_model_name = 'openai/clip-vit-base-patch32'
@@ -162,8 +162,8 @@ dotav2_train_dataset = dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
         data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dotav2_1024_500/',
-        ann_file='train/annfiles/', ## TODO
-        data_prefix=dict(img_path='train/images/'), ## TODO
+        ann_file='trainval/annfiles/', ## TODO
+        data_prefix=dict(img_path='trainval/images/'), ## TODO
         filter_cfg=dict(filter_empty_gt=True),
         batch_shapes_cfg=None),
     class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/dota_v2_class_texts.json',

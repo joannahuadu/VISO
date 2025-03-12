@@ -128,3 +128,8 @@ work_dirs_old
 venus_run.sh
 
 ./data
+configs/*
+*.jpg
+*.png
+tools/*
+appendix_work_dirs/*

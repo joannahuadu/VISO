@@ -7,8 +7,8 @@ neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
 num_classes = 1
 load_from = "work_dirs/yolo_world_sp_v2_l_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val_split/best_dota_mAP_epoch_16.pth"
-embedding_path = "tools/embeddings/dota_v1_class_texts_zeroshot_fmow_storage_tank_embedding.npy"
-
+embedding_path = "tools/embeddings/dota_v1_class_texts_zeroshot_fmow_port_embedding.npy"
+work_dir = "work_dirs/samples/port"
 # model settings
 model = dict(type='SimpleYOLOWorldDetectorSP',
     mm_neck=True,
@@ -36,10 +36,10 @@ dota_val_dataset = dict(
     dataset=dict(
         img_suffix='jpg',
         data_root='data/split_fMoW_1024/',
-        ann_file='val/storage_tank/annfiles/',
-        data_prefix=dict(img_path='val/storage_tank/images/'),
+        ann_file='samples/port/annfiles/',
+        data_prefix=dict(img_path='samples/port/images/'),
         batch_shapes_cfg=None),
-    class_text_path='data/texts/dota_v1_class_texts_zeroshot_fmow_storage_tank.json')
+    class_text_path='data/texts/dota_v1_class_texts_zeroshot_fmow_port.json')
 
 val_dataloader = dict(dataset=dota_val_dataset)
 
