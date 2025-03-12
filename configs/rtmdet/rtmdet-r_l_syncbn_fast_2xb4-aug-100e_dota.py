@@ -2,10 +2,10 @@ _base_ = './rtmdet-r_l_syncbn_fast_2xb4-36e_dota.py'
 
 # This config use longer schedule with Mixup, Mosaic and Random Rotate.
 
-# checkpoint = 'https://download.openmmlab.com/mmdetection/v3.0/rtmdet/cspnext_rsb_pretrain/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'  # noqa
-checkpoint = './weights/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'
+checkpoint = 'https://download.openmmlab.com/mmdetection/v3.0/rtmdet/cspnext_rsb_pretrain/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'  # noqa
+load_from = '/mnt/data1/workspace/wmq/YOLO-World/weights/rtmdet/rtmdet-r_l_syncbn_fast_2xb4-aug-100e_dota_20230224_124735-ed4ea966.pth'
 # ========================modified parameters======================
-train_batch_size_per_gpu = 8
+
 # Base learning rate for optim_wrapper. Corresponding to 1xb8=8 bs
 base_lr = 0.00025  # 0.004 / 16
 lr_start_factor = 1.0e-5
@@ -26,11 +26,11 @@ random_rotate_ratio = 0.5
 rotate_rect_obj_labels = [9, 11]
 
 # Save model checkpoint and validation intervals
-save_checkpoint_intervals = 5
+save_checkpoint_intervals = 1
 # validation intervals in stage 2
 val_interval_stage2 = 1
 # The maximum checkpoints to keep.
-max_keep_ckpts = 3
+max_keep_ckpts = -1
 
 # Submission dir for result submit
 submission_dir = './work_dirs/{{fileBasenameNoExtension}}/submission'
@@ -39,12 +39,12 @@ submission_dir = './work_dirs/{{fileBasenameNoExtension}}/submission'
 
 train_pipeline = [
     dict(type='LoadImageFromFile', backend_args=_base_.backend_args),
-    dict(type='LoadAnnotations', with_bbox=True, box_type='qbox'),
+    dict(type='mmdet.LoadAnnotations', with_bbox=True, box_type='qbox'),
     dict(
         type='mmrotate.ConvertBoxType',
         box_type_mapping=dict(gt_bboxes='rbox')),
     dict(
-        type='Mosaic',
+        type='mmyolo.Mosaic',
         img_scale=img_scale,
         use_cached=True,
         max_cached_images=mosaic_max_cached_images,
@@ -70,7 +70,7 @@ train_pipeline = [
         direction=['horizontal', 'vertical', 'diagonal']),
     dict(type='mmdet.Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
     dict(
-        type='YOLOv5MixUp',
+        type='mmyolo.YOLOv5MixUp',
         use_cached=True,
         max_cached_images=mixup_max_cached_images),
     dict(type='mmdet.PackDetInputs')
@@ -78,7 +78,7 @@ train_pipeline = [
 
 train_pipeline_stage2 = [
     dict(type='LoadImageFromFile', backend_args=_base_.backend_args),
-    dict(type='LoadAnnotations', with_bbox=True, box_type='qbox'),
+    dict(type='mmdet.LoadAnnotations', with_bbox=True, box_type='qbox'),
     dict(
         type='mmrotate.ConvertBoxType',
         box_type_mapping=dict(gt_bboxes='rbox')),
@@ -104,7 +104,7 @@ train_pipeline_stage2 = [
     dict(type='mmdet.PackDetInputs')
 ]
 
-train_dataloader = dict(batch_size=train_batch_size_per_gpu, dataset=dict(pipeline=train_pipeline))
+train_dataloader = dict(dataset=dict(pipeline=train_pipeline))
 
 # learning rate
 param_scheduler = [
@@ -131,7 +131,8 @@ default_hooks = dict(
         type='CheckpointHook',
         interval=save_checkpoint_intervals,
         max_keep_ckpts=max_keep_ckpts,  # only keep latest 3 checkpoints
-        save_best='auto'))
+        save_best='auto',
+        rule='greater'))
 
 custom_hooks = [
     dict(
@@ -144,13 +145,14 @@ custom_hooks = [
     dict(
         type='mmdet.PipelineSwitchHook',
         switch_epoch=max_epochs - num_epochs_stage2,
-        switch_pipeline=train_pipeline_stage2)
+        switch_pipeline=train_pipeline_stage2),
+    dict(type='EmptyCacheHook'),
 ]
 
 train_cfg = dict(
     type='EpochBasedTrainLoop',
     max_epochs=max_epochs,
-    val_interval=save_checkpoint_intervals,
+    val_interval=1,
     dynamic_intervals=[(max_epochs - num_epochs_stage2, val_interval_stage2)])
 
 # Inference on test dataset and format the output results

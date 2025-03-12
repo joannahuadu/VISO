@@ -85,7 +85,7 @@ def inference(args, logger):
 
     result = {}
     avg_flops = []
-    data_loader = Runner.build_dataloader(cfg.val_dataloader)
+    data_loader = Runner.build_dataloader(cfg.test_dataloader)
     model = MODELS.build(cfg.model)
     # if torch.cuda.is_available():
     #     model = model.cuda()

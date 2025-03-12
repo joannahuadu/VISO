@@ -4,10 +4,35 @@ _base_ = (
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
 neck_reduce_num_heads= [1,1,1] #??
-is_sparse_levels = [1,1,1]
+is_sparse_levels = [0,0,0]
 num_classes = 1
 load_from = "work_dirs/yolo_world_sp_v2_l_remoteclip_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val_bcelossattn/best_dota_mAP_epoch_24.pth"
-embedding_path = "tools/embeddings/dota_v1_class_texts_remoteclip_helicopter_embedding.npy"
+
+dataset_name = "fmow"
+task = "wildfire" # class
+work_dir = f"work_dirs/zero-shot/{dataset_name}_{task}"
+embedding_path = f"tools/embeddings/remoteclip_{dataset_name}_{task}.npy"
+class_text_path = f'data/texts/{dataset_name}_{task}.json'
+data_root = f"data/split_fMoW_1024/val/zero-shot/{task}"
+img_suffix = 'jpg'
+
+if task == 'wind_farm':
+    _base_.model_test_cfg.score_thr = 0.01
+    _base_.model.test_cfg.score_thr = 0.01
+elif task == 'port':
+    pass
+elif task == 'storage_tank':
+    _base_.model_test_cfg.score_thr = 0.2
+    _base_.model.test_cfg.score_thr = 0.2
+elif task == 'swimming_pool':
+    _base_.model_test_cfg.score_thr = 0.2
+    _base_.model.test_cfg.score_thr = 0.2
+elif task =='tower':
+    _base_.model_test_cfg.score_thr = 0.05
+    _base_.model.test_cfg.score_thr = 0.05
+
+
+
 # _base_.model_test_cfg.score_thr = 0.01
 # _base_.model.test_cfg = _base_.model_test_cfg
 # model settings
@@ -35,16 +60,23 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
 
 dota_val_dataset = dict(
     dataset=dict(
-        ann_file='val/annfiles/',
-        data_prefix=dict(img_path='val/images/'),
+        img_suffix=img_suffix,
+        data_root=data_root,
+        ann_file='annfiles/',
+        data_prefix=dict(img_path='images/'),
         batch_shapes_cfg=None),
-    class_text_path='data/texts/dota_v1_class_texts_helicopter.json')
-
+    class_text_path=class_text_path)
 val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
 
-custom_hooks = [
+# _base_.model.neck.mask_vis = True # 这个是画特征图和mask的
+default_hooks = dict(
+    visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook', draw=True, score_thr = 0.000001)) 
+custom_hooks = [ # 加这3个Hook，才能够在推理的时候把mask画出来
+    dict(type='yolo_world.VisInfoHook',
+        text_path=class_text_path
+        ), 
     dict(
         type='SPHook',
     )

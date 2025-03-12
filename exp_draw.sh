@@ -1,0 +1,8 @@
+CUDA_VISIBLE_DEVICES=9 python ./tools/test.py ./configs/pretrain_rs/test/yolo_world_sp_l_vlpan_bn_2e-4_100e_4x8gpus_od_vg_infer_simple_dotav2test.py /mnt/data1/workspace/wmq/YOLO-World/work_dirs/yolo_world_sp_l_vlpan_bn_2e-4_100e_4x8gpus_od_vg_train_dotaval_bcelossattn/trainval/epoch_14.pth
+
+CUDA_VISIBLE_DEVICES=8 python ./tools/test.py ./configs/pretrain_rs/test/yolo_world_sp_l_vlpan_bn_2e-4_100e_4x8gpus_od_vg_infer_simple_diorrsvgtest.py /mnt/data1/workspace/wmq/YOLO-World/work_dirs/yolo_world_sp_l_vlpan_bn_2e-4_100e_4x8gpus_od_vg_train_dotaval_bcelossattn/trainval/epoch_14.pth
+
+
+CUDA_VISIBLE_DEVICES=7 python ./tools/test.py ./configs/pretrain_rs/test/yolo_world_sp_l_vlpan_bn_2e-4_100e_4x8gpus_od_vg_infer_simple_dotav2test_single_task.py /mnt/data1/workspace/wmq/YOLO-World/work_dirs/yolo_world_sp_l_vlpan_bn_2e-4_100e_4x8gpus_od_vg_train_dotaval_bcelossattn/trainval/epoch_14.pth
+
+CUDA_VISIBLE_DEVICES=6 python ./tools/test.py ./configs/pretrain_rs/test/yolo_world_sp_l_vlpan_bn_2e-4_100e_4x8gpus_od_vg_infer_simple_dotav2test_single_task_2.py /mnt/data1/workspace/wmq/YOLO-World/work_dirs/yolo_world_sp_l_vlpan_bn_2e-4_100e_4x8gpus_od_vg_train_dotaval_bcelossattn/trainval/epoch_14.pth

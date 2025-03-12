@@ -30,7 +30,10 @@ class MultiModalDataset:
         self.dataset: BaseDataset
         if class_text_path is not None:
             self.class_texts = json.load(open(class_text_path, 'r'))
-            classes = tuple(item.replace(" ", replace_char) for sublist in self.class_texts for item in sublist)
+            # classes = tuple(item.replace(" ", replace_char)+'/' if self. for sublist in self.class_texts for item in sublist)
+            classes =  tuple('/'.join(sublist).replace(" ", replace_char) if len(sublist)>0 else sublist[0].replace(" ", replace_char) for sublist in self.class_texts)
+            if 'des' in class_text_path:
+                classes = tuple(class_.split('_with')[0] for class_ in classes) 
             metainfo = dict()
             metainfo['classes'] = classes
             # metainfo['palette'] = self.PALETTE[:len(self.class_texts)]

@@ -43,8 +43,8 @@ class YOLOWorldDetector(YOLODetector):
         img_feats, txt_feats = self.extract_feat(batch_inputs,
                                                  batch_data_samples)
 
-        self.bbox_head.num_classes = self.num_test_classes
-        # self.bbox_head.num_classes = txt_feats[0].shape[0]
+        # self.bbox_head.num_classes = self.num_test_classes
+        self.bbox_head.num_classes = txt_feats[0].shape[0]
         results_list = self.bbox_head.predict(img_feats,
                                               txt_feats,
                                               batch_data_samples,
@@ -132,7 +132,12 @@ class SimpleYOLOWorldDetector(YOLODetector):
         if not self.reparameterized:
             if len(embedding_path) > 0:
                 import numpy as np
-                self.embeddings = torch.nn.Parameter(
+                if embedding_path.endswith('.pth'):
+                    embeddings = torch.load(embedding_path)
+                    self.embeddings = [torch.nn.Parameter(
+                    emb.float()) for emb in embeddings]
+                else:
+                    self.embeddings = torch.nn.Parameter(
                     torch.from_numpy(np.load(embedding_path)).float())
             else:
                 # random init
@@ -142,9 +147,17 @@ class SimpleYOLOWorldDetector(YOLODetector):
                 self.embeddings = nn.Parameter(embeddings)
 
             if self.freeze_prompt:
-                self.embeddings.requires_grad = False
+                try:
+                    self.embeddings.requires_grad = False
+                except:
+                    for embedding in self.embeddings:
+                        embedding.requires_grad = False
             else:
-                self.embeddings.requires_grad = True
+                try:
+                    self.embeddings.requires_grad = True
+                except:
+                    for embedding in self.embeddings:
+                        embedding.requires_grad = True
 
             if use_mlp_adapter:
                 self.adapter = nn.Sequential(
@@ -216,7 +229,10 @@ class SimpleYOLOWorldDetector(YOLODetector):
 
         if not self.reparameterized:
             # use embeddings
-            txt_feats = self.embeddings[None]
+            if isinstance(self.embeddings, list):
+                txt_feats = self.embeddings[batch_data_samples[0].img_id][None]
+            else:
+                txt_feats = self.embeddings[None]
             if self.adapter is not None:
                 txt_feats = self.adapter(txt_feats) + txt_feats
                 txt_feats = nn.functional.normalize(txt_feats, dim=-1, p=2)

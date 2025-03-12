@@ -15,7 +15,7 @@ neck_num_heads = [4, 8, _base_.last_stage_out_channels // 2 // 32]
 base_lr = 2e-4
 weight_decay = 0.025
 train_batch_size_per_gpu = 4
-load_from = "pretrained_models/yolo_world_v2_l_obj365v1_goldg_pretrain-a82b1fe3.pth"
+load_from = "/mnt/data1/workspace/wmq/YOLO-World/weights/yolo_world_v2_l_obj365v1_goldg_pretrain_1280ft-9babe3f6.pth"
 # text_model_name = '../pretrained_models/clip-vit-base-patch32-projection'
 text_model_name = 'openai/clip-vit-base-patch32'
 img_scale = (1280, 1280)
@@ -99,15 +99,16 @@ obj365v1_train_dataset = dict(
     type='MultiModalDataset',
     dataset=dict(
         type='YOLOv5Objects365V1Dataset',
-        data_root='data/objects365v1/',
+        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/objects365v1/',
         ann_file='annotations/objects365_train.json',
         data_prefix=dict(img='train/'),
         filter_cfg=dict(filter_empty_gt=False, min_size=32)),
-    class_text_path='data/texts/obj365v1_class_texts.json',
+    replace_char = " ",
+    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/obj365v1_class_texts.json',
     pipeline=train_pipeline)
 
 mg_train_dataset = dict(type='YOLOv5MixedGroundingDataset',
-                        data_root='data/mixed_grounding/',
+                        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/mixed_grounding/',
                         ann_file='annotations/final_mixed_train_no_coco.json',
                         data_prefix=dict(img='gqa/images/'),
                         filter_cfg=dict(filter_empty_gt=False, min_size=32),
@@ -115,7 +116,7 @@ mg_train_dataset = dict(type='YOLOv5MixedGroundingDataset',
 
 flickr_train_dataset = dict(
     type='YOLOv5MixedGroundingDataset',
-    data_root='data/flickr/',
+    data_root='/mnt/data1/workspace/wmq/YOLO-World/data/flickr/',
     ann_file='annotations/final_flickr_separateGT_train.json',
     data_prefix=dict(img='full_images/'),
     filter_cfg=dict(filter_empty_gt=True, min_size=32),
@@ -149,18 +150,18 @@ coco_val_dataset = dict(
     _delete_=True,
     type='MultiModalDataset',
     dataset=dict(type='YOLOv5LVISV1Dataset',
-                 data_root='data/coco/',
+                 data_root='/mnt/data1/workspace/wmq/YOLO-World/data/coco/',
                  test_mode=True,
                  ann_file='lvis/lvis_v1_minival_inserted_image_name.json',
                  data_prefix=dict(img=''),
                  batch_shapes_cfg=None),
-    class_text_path='data/texts/lvis_v1_class_texts.json',
+    class_text_path='/mnt/data1/workspace/wmq/YOLO-World/data/texts/lvis_v1_class_texts.json',
     pipeline=test_pipeline)
 val_dataloader = dict(dataset=coco_val_dataset)
 test_dataloader = val_dataloader
 
 val_evaluator = dict(type='mmdet.LVISMetric',
-                     ann_file='data/coco/lvis/lvis_v1_minival_inserted_image_name.json',
+                     ann_file='/mnt/data1/workspace/wmq/YOLO-World/data/coco/lvis/lvis_v1_minival_inserted_image_name.json',
                      metric='bbox')
 test_evaluator = val_evaluator
 
