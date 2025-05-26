@@ -163,7 +163,11 @@ dotav2_train_dataset = dict(
     dataset=dict(
         _scope_='yolo_world',
         type='YOLOv5DOTADataset',
+<<<<<<< HEAD
         data_root='/home/fit/qiuhan/data/split_ss_dotav2_1024_500/',
+=======
+        data_root='/mnt/data1/workspace/wmq/YOLO-World/data/split_ss_dotav2_1024_500/',
+>>>>>>> 4de450f42039a598f14a53005223068df7a38e96
         ann_file='trainval/annfiles/', ## TODO
         data_prefix=dict(img_path='trainval/images/'), ## TODO
         filter_cfg=dict(filter_empty_gt=True),

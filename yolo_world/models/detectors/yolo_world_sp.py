@@ -97,7 +97,8 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
                     batch_data_samples, results_list)
             return batch_data_samples
             
-        self.bbox_head.num_classes = self.num_test_classes
+        # self.bbox_head.num_classes = self.num_test_classes
+        self.bbox_head.num_classes = txt_feats[0].shape[0]
         if self.reparameterized:
             results_list = self.bbox_head.predict(img_feats,
                                                   batch_data_samples,
@@ -164,7 +165,10 @@ class SimpleYOLOWorldDetectorSP(SimpleYOLOWorldDetector):
         
         if not self.reparameterized:
             # use embeddings
-            txt_feats = self.embeddings[None]
+            if isinstance(self.embeddings, list):
+                txt_feats = self.embeddings[batch_data_samples[0].img_id][None]
+            else:
+                txt_feats = self.embeddings[None]
             if self.adapter is not None:
                 txt_feats = self.adapter(txt_feats) + txt_feats
                 txt_feats = nn.functional.normalize(txt_feats, dim=-1, p=2)

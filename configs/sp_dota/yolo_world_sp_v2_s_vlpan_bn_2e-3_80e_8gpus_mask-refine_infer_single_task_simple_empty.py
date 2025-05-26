@@ -3,7 +3,7 @@ _base_ = (
     'yolo_world_v2_s_vlpan_bn_2e-3_80e_8gpus_mask-refine_finetune_dota.py')
 
 # neck_reduce_embed_channels = [256, 512, _base_.last_stage_out_channels]
-neck_reduce_num_heads= [1,1,1] #??
+neck_reduce_num_heads= [1,1,1] #??a
 is_sparse_levels = [1,0,0]
 num_classes = 1
 score_th = 0.99

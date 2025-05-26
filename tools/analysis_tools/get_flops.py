@@ -92,7 +92,7 @@ def inference(args, logger):
     
     # data_loader = Runner.build_dataloader(cfg.val_dataloader)
     # model = MODELS.build(cfg.model)
-    data_loader = runner.build_dataloader(runner._val_dataloader)
+    data_loader = runner.build_dataloader(runner._test_dataloader)
     runner.call_hook("before_run")
     runner.load_or_resume()
     runner.call_hook('before_test')

@@ -6,11 +6,11 @@ _base_ = (
 neck_reduce_num_heads= [1,1,1] #??
 is_sparse_levels = [0,0,0]
 num_classes = 1
-load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/epoch_5.pth"
+load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_5.pth"
 # load_from = "work_dirs/yolo_world_sp_v2_s_remoteclip_vlpan_bn_2e-3_80e_8gpus_mask-refine_frozen_fmow_cloudcov/best_fmow_loss_epoch_64.pth"
 
 dataset_name = "fmow"
-task = "wind_farm"
+task = "storage_tank"
 work_dir = f"work_dirs/example/remoteclip/cloud_{dataset_name}_{task}"
 embedding_path = f"tools/embeddings/remoteclip_{dataset_name}_{task}.npy"
 class_text_path=f'data/texts/{dataset_name}_{task}.json'
@@ -29,7 +29,7 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
                                       featmap_strides=_base_.strides,
                                       norm_cfg=_base_.norm_cfg,
                                       act_cfg=dict(type='SiLU', inplace=True))),
-    with_cloud_model=False,
+    with_cloud_model=True,
     box_type='hbox',
     cov_thr = cov_thr,
     mm_neck=True,

@@ -20,7 +20,7 @@ submission_dir = './work_dirs/{{fileBasenameNoExtension}}/submission'
 
 num_classes = 18  # Number of classes for classification
 # Batch size of a single GPU during training
-train_batch_size_per_gpu = 4
+train_batch_size_per_gpu = 1
 # Worker to pre-fetch data for each single GPU during training
 train_num_workers = 8
 # persistent_workers must be False if num_workers is 0.
@@ -311,8 +311,13 @@ default_hooks = dict(
         type='CheckpointHook',
         interval=save_checkpoint_intervals,
         max_keep_ckpts=max_keep_ckpts,  # only keep latest 3 checkpoints
+<<<<<<< HEAD
         rule='greater',
         save_best='auto'))
+=======
+        save_best='auto',
+        rule='greater'))
+>>>>>>> 4de450f42039a598f14a53005223068df7a38e96
 
 custom_hooks = [
     dict(

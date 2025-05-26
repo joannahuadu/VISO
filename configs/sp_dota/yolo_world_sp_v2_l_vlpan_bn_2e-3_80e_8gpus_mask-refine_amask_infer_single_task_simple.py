@@ -36,17 +36,32 @@ model = dict(type='SimpleYOLOWorldDetectorSP',
 
 dota_val_dataset = dict(
     dataset=dict(
-        ann_file='val/annfiles/',
-        data_prefix=dict(img_path='val/images/'),
+        data_root = data_root,
+        ann_file='annfiles/',
+        data_prefix=dict(img_path='images/'),
         batch_shapes_cfg=None),
-    class_text_path='data/texts/dota_v1_class_texts_helicopter.json')
+    class_text_path=class_text_path)
 
 val_dataloader = dict(dataset=dota_val_dataset)
 
 test_dataloader = val_dataloader
 
-custom_hooks = [
-    dict(
-        type='SPHook',
-    )
-]
+if not is_visable:
+    custom_hooks = [
+        dict(
+            type='SPHook',
+        )
+    ]
+else:
+    _base_.model.neck.mask_vis = True
+    # 这个是把检测结果画出来的hook
+    default_hooks = dict(
+        visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook', draw=True, score_thr = 0.000001)) 
+    custom_hooks = [ # 加这3个Hook，才能够在推理的时候把mask画出来
+        dict(type='yolo_world.VisInfoHook',
+            text_path=class_text_path
+            ), 
+        dict(
+            type='SPHook',
+        )
+    ]

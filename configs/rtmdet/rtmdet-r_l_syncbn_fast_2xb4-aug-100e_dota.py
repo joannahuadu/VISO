@@ -4,6 +4,8 @@ _base_ = './rtmdet-r_l_syncbn_fast_2xb4-36e_dota.py'
 
 checkpoint = '/home/fit/qiuhan/WORK/wmq/aerial-ov-detection/weights/rtmdet/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'  # noqa
 load_from = '/home/fit/qiuhan/WORK/wmq/aerial-ov-detection/weights/rtmdet/rtmdet-r_l_syncbn_fast_2xb4-aug-100e_dota_20230224_124735-ed4ea966.pth'
+# checkpoint = 'https://download.openmmlab.com/mmdetection/v3.0/rtmdet/cspnext_rsb_pretrain/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'  # noqa
+# load_from = '/mnt/data1/workspace/wmq/YOLO-World/weights/rtmdet/rtmdet-r_l_syncbn_fast_2xb4-aug-100e_dota_20230224_124735-ed4ea966.pth'
 # ========================modified parameters======================
 
 # Base learning rate for optim_wrapper. Corresponding to 1xb8=8 bs
@@ -131,8 +133,13 @@ default_hooks = dict(
         type='CheckpointHook',
         interval=save_checkpoint_intervals,
         max_keep_ckpts=max_keep_ckpts,  # only keep latest 3 checkpoints
+<<<<<<< HEAD
         rule='greater',
         save_best='auto'))
+=======
+        save_best='auto',
+        rule='greater'))
+>>>>>>> 4de450f42039a598f14a53005223068df7a38e96
 
 custom_hooks = [
     dict(

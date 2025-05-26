@@ -130,3 +130,7 @@ venus_run.sh
 ./data
 jobs/*
 configs/*
+*.jpg
+*.png
+tools/*
+appendix_work_dirs/*

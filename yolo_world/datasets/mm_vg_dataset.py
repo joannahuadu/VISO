@@ -24,9 +24,11 @@ class VisualGroundingDataset(BatchShapePolicyDataset, CocoDataset):
                  *args,
                  datasets: List[str] = None,
                  filter_anns: List[str] = None,
+                 load_type: str = 'image_id',
                  **kwargs):
         self.datasets = datasets
         self.filter_anns = filter_anns
+        self.load_type = load_type
         super().__init__(*args, **kwargs)
 
     def load_data_list(self) -> List[dict]:
@@ -53,7 +55,7 @@ class VisualGroundingDataset(BatchShapePolicyDataset, CocoDataset):
                 with open(os.path.join(self.ann_file, ann), "r") as file:
                     for line in file:
                         data = json.loads(line)
-                        image_id = data['image_id']
+                        image_id = data[self.load_type]
                         if image_id not in data_info:
                             data_info[image_id] = [data]
                         else:
@@ -67,7 +69,7 @@ class VisualGroundingDataset(BatchShapePolicyDataset, CocoDataset):
                     if cat_name not in cat2id:
                         cat2id[cat_name] = len(cat2id)
                         texts.append([cat_name])
-                parse_data = {"img_id": img_id, "img_path": os.path.join(img_prefix, dataset, image_id), "instances": [], "texts": texts}
+                parse_data = {"img_id": img_id, "img_path": os.path.join(img_prefix, dataset, info['image_id']), "instances": [], "texts": texts}
                 for info in info_list:
                     parse_data["instances"].append({"ignore_flag": 0, "bbox": [item for sublist in info["poly"] for item in sublist], 'bbox_label': cat2id[info["question"]]})
                     

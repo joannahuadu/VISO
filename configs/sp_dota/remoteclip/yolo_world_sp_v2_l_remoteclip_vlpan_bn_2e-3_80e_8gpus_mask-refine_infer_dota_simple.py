@@ -8,6 +8,7 @@ is_sparse_levels = [1,1,1]
 
 load_from = "work_dirs/yolo_world_sp_v2_l_remoteclip_vlpan_bn_2e-4_80e_8gpus_mask-refine_finetune_dota_train_val/best_dota_mAP_epoch_16.pth"
 embedding_path = "tools/embeddings/dota_v1_class_texts_remoteclip_all_embedding.npy"
+work_dir = "work_dirs/remoteclip/port"
 
 # model settings
 model = dict(type='SimpleYOLOWorldDetectorSP',
