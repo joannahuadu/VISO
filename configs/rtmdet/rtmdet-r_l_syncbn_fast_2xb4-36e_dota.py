@@ -1,23 +1,24 @@
 _base_ = '../../third_party/mmyolo/configs/_base_/default_runtime.py'
-
-checkpoint = 'https://download.openmmlab.com/mmdetection/v3.0/rtmdet/cspnext_rsb_pretrain/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'  # noqa
-
+custom_imports = dict(imports=['yolo_world'],
+                      allow_failed_imports=False)
+# checkpoint = 'https://download.openmmlab.com/mmdetection/v3.0/rtmdet/cspnext_rsb_pretrain/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'  # noqa
+checkpoint = '/home/fit/qiuhan/WORK/wmq/aerial-ov-detection/weights/rtmdet/cspnext-l_8xb256-rsb-a1-600e_in1k-6a760974.pth'  # noqa
 # ========================Frequently modified parameters======================
 # -----data related-----
-data_root = 'data/split_ss_dota'
+data_root = '/home/fit/qiuhan/data/split_ss_dotav2_1024_500/'
 # Path of train annotation folder
 train_ann_file = 'trainval/annfiles/'
 train_data_prefix = 'trainval/images/'  # Prefix of train image path
 # Path of val annotation folder
-val_ann_file = 'trainval/annfiles/'
-val_data_prefix = 'trainval/images/'  # Prefix of val image path
+val_ann_file = 'val/annfiles/'
+val_data_prefix = 'val/images/'  # Prefix of val image path
 # Path of test images folder
 test_data_prefix = 'test/images/'
 
 # Submission dir for result submit
 submission_dir = './work_dirs/{{fileBasenameNoExtension}}/submission'
 
-num_classes = 15  # Number of classes for classification
+num_classes = 18  # Number of classes for classification
 # Batch size of a single GPU during training
 train_batch_size_per_gpu = 4
 # Worker to pre-fetch data for each single GPU during training
@@ -54,7 +55,7 @@ rotate_rect_obj_labels = [9, 11]
 # Dataset type, this will be used to define the dataset
 dataset_type = 'YOLOv5DOTADataset'
 # Batch size of a single GPU during validation
-val_batch_size_per_gpu = 8
+val_batch_size_per_gpu = 32
 # Worker to pre-fetch data for each single GPU during validation
 val_num_workers = 8
 
@@ -82,9 +83,9 @@ qfl_beta = 2.0  # beta of QualityFocalLoss
 weight_decay = 0.05
 
 # Save model checkpoint and validation intervals
-save_checkpoint_intervals = 4
+save_checkpoint_intervals = 1
 # The maximum checkpoints to keep.
-max_keep_ckpts = 3
+max_keep_ckpts = -1
 # single-scale training is recommended to
 # be turned on, which can speed up training.
 env_cfg = dict(cudnn_benchmark=True)
@@ -170,7 +171,7 @@ model = dict(
 
 train_pipeline = [
     dict(type='LoadImageFromFile', backend_args=_base_.backend_args),
-    dict(type='LoadAnnotations', with_bbox=True, box_type='qbox'),
+    dict(type='mmdet.LoadAnnotations', with_bbox=True, box_type='qbox'),
     dict(
         type='mmrotate.ConvertBoxType',
         box_type_mapping=dict(gt_bboxes='rbox')),
@@ -186,7 +187,7 @@ train_pipeline = [
         rotate_type='mmrotate.Rotate',
         rect_obj_labels=rotate_rect_obj_labels),
     dict(type='mmdet.Pad', size=img_scale, pad_val=dict(img=(114, 114, 114))),
-    dict(type='RegularizeRotatedBox', angle_version=angle_version),
+    dict(type='mmyolo.RegularizeRotatedBox', angle_version=angle_version),
     dict(type='mmdet.PackDetInputs')
 ]
 
@@ -226,6 +227,7 @@ train_dataloader = dict(
     collate_fn=dict(type='yolov5_collate'),
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
+        _scope_='yolo_world',
         type=dataset_type,
         data_root=data_root,
         ann_file=train_ann_file,
@@ -241,6 +243,7 @@ val_dataloader = dict(
     drop_last=False,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
+        _scope_='yolo_world',
         type=dataset_type,
         data_root=data_root,
         ann_file=val_ann_file,
@@ -308,6 +311,7 @@ default_hooks = dict(
         type='CheckpointHook',
         interval=save_checkpoint_intervals,
         max_keep_ckpts=max_keep_ckpts,  # only keep latest 3 checkpoints
+        rule='greater',
         save_best='auto'))
 
 custom_hooks = [
@@ -323,7 +327,7 @@ custom_hooks = [
 train_cfg = dict(
     type='EpochBasedTrainLoop',
     max_epochs=max_epochs,
-    val_interval=save_checkpoint_intervals)
+    val_interval=1)
 
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')

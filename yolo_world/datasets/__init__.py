@@ -10,6 +10,7 @@ from .transformers import *  # NOQA
 from .yolov5_v3det import YOLOv5V3DetDataset
 from .yolov5_lvis import YOLOv5LVISV1Dataset
 from .yolov5_dota import YOLOv5DOTADataset
+from .yolov5_fair import YOLOv5FAIRDataset
 from .fMoW import fMoWDataset
 __all__ = [
     'MultiModalDataset', 'YOLOv5Objects365V1Dataset',
@@ -17,5 +18,5 @@ __all__ = [
     'YOLOv5V3DetDataset', 'yolow_collate', 'yoloc_collate',
     'YOLOv5LVISV1Dataset', 'MultiModalMixedDataset',
     'YOLOv5DOTADataset', 'fMoWDataset',
-    'VisualGroundingDataset'
+    'VisualGroundingDataset', 'YOLOv5FAIRDataset'
 ]
