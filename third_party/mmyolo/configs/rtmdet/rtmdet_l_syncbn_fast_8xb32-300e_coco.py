@@ -12,7 +12,7 @@ val_data_prefix = 'val2017/'  # Prefix of val image path
 
 num_classes = 80  # Number of classes for classification
 # Batch size of a single GPU during training
-train_batch_size_per_gpu = 32
+train_batch_size_per_gpu = 2
 # Worker to pre-fetch data for each single GPU during training
 train_num_workers = 10
 # persistent_workers must be False if num_workers is 0.
@@ -36,7 +36,7 @@ model_test_cfg = dict(
 
 # ========================Possible modified parameters========================
 # -----data related-----
-img_scale = (640, 640)  # width, height
+img_scale = (1024, 1024)  # width, height
 # ratio range for random resize
 random_resize_ratio_range = (0.1, 2.0)
 # Cached images number in mosaic
@@ -77,11 +77,11 @@ qfl_beta = 2.0  # beta of QualityFocalLoss
 weight_decay = 0.05
 
 # Save model checkpoint and validation intervals
-save_checkpoint_intervals = 10
+save_checkpoint_intervals = 1
 # validation intervals in stage 2
 val_interval_stage2 = 1
 # The maximum checkpoints to keep.
-max_keep_ckpts = 3
+max_keep_ckpts = -1
 # single-scale training is recommended to
 # be turned on, which can speed up training.
 env_cfg = dict(cudnn_benchmark=True)
@@ -277,8 +277,9 @@ default_hooks = dict(
     checkpoint=dict(
         type='CheckpointHook',
         interval=save_checkpoint_intervals,
-        max_keep_ckpts=max_keep_ckpts  # only keep latest 3 checkpoints
-    ))
+        max_keep_ckpts=max_keep_ckpts,
+        save_best='auto',
+        rule='greater'))
 
 custom_hooks = [
     dict(

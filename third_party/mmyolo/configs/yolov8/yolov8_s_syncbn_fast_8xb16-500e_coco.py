@@ -12,7 +12,7 @@ val_data_prefix = 'val2017/'  # Prefix of val image path
 
 num_classes = 80  # Number of classes for classification
 # Batch size of a single GPU during training
-train_batch_size_per_gpu = 16
+train_batch_size_per_gpu = 2
 # Worker to pre-fetch data for each single GPU during training
 train_num_workers = 8
 # persistent_workers must be False if num_workers is 0
@@ -36,13 +36,13 @@ model_test_cfg = dict(
 
 # ========================Possible modified parameters========================
 # -----data related-----
-img_scale = (640, 640)  # width, height
+img_scale = (1024, 1024)  # width, height
 # Dataset type, this will be used to define the dataset
 dataset_type = 'YOLOv5CocoDataset'
 # Batch size of a single GPU during validation
-val_batch_size_per_gpu = 1
+val_batch_size_per_gpu = 32
 # Worker to pre-fetch data for each single GPU during validation
-val_num_workers = 2
+val_num_workers = 8
 
 # Config of batch shapes. Only on val.
 # We tested YOLOv8-m will get 0.02 higher than not using it.
@@ -85,11 +85,11 @@ loss_dfl_weight = 1.5 / 4
 lr_factor = 0.01  # Learning rate scaling factor
 weight_decay = 0.0005
 # Save model checkpoint and validation intervals in stage 1
-save_epoch_intervals = 10
+save_epoch_intervals = 1
 # validation intervals in stage 2
 val_interval_stage2 = 1
 # The maximum checkpoints to keep.
-max_keep_ckpts = 2
+max_keep_ckpts = -1
 # Single-scale training is recommended to
 # be turned on, which can speed up training.
 env_cfg = dict(cudnn_benchmark=True)
@@ -299,8 +299,9 @@ default_hooks = dict(
     checkpoint=dict(
         type='CheckpointHook',
         interval=save_epoch_intervals,
+        max_keep_ckpts=max_keep_ckpts,
         save_best='auto',
-        max_keep_ckpts=max_keep_ckpts))
+        rule='greater'))
 
 custom_hooks = [
     dict(
