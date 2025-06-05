@@ -22,6 +22,8 @@ from mmrotate.evaluation import DOTAMetric
 from mmyolo.registry import METRICS
 from mmengine.fileio import dump, get_local_path, load
 
+from mmdet.evaluation import CocoMetric
+
 @METRICS.register_module()
 class QiyuanMetric(DOTAMetric):
     """Customized COCO metric with modified results2json for rbox."""
@@ -181,3 +183,103 @@ class QiyuanMetric(DOTAMetric):
         dump(coco_format_results, result_files['bbox'])
 
         return osp.dirname(f'{outfile_prefix}/pred.json')
+
+
+@METRICS.register_module()
+class QiyuanCOCOMetric(CocoMetric):
+    """Customized COCO metric with modified results2json for rbox."""
+
+    def __init__(self, 
+                 jsonfile: Optional[Union[str, List[str]]] = None,
+                 *args, 
+                 **kwargs):
+        """
+        Args:
+            merge_patches (bool): Whether to merge patches' predictions into
+                full image's results and generate a zip file for DOTA online
+                evaluation.
+        """
+        super().__init__(*args, **kwargs)
+        assert jsonfile is not None, \
+            'jsonfile must be specified for QiyuanMetric.'
+
+        with open(jsonfile, 'r') as f:
+            json_data = json.load(f)
+
+        self.images = json_data['images']
+        self.categories = json_data['categories']
+        self.cat_ids = {4: 1, 2: 2, 6: 3, 5: 4, 8: 5, 9: 6, 1: 7, 3: 8, 0: 9, 7: 10}
+    
+    def results2json(self, results: Sequence[dict],
+                     outfile_prefix: str) -> dict:
+        """Dump the detection results to a COCO style json file.
+
+        There are 3 types of results: proposals, bbox predictions, mask
+        predictions, and they have different data types. This method will
+        automatically recognize the type, and dump them to json files.
+
+        Args:
+            results (Sequence[dict]): Testing results of the
+                dataset.
+            outfile_prefix (str): The filename prefix of the json files. If the
+                prefix is "somepath/xxx", the json files will be named
+                "somepath/xxx.bbox.json", "somepath/xxx.segm.json",
+                "somepath/xxx.proposal.json".
+
+        Returns:
+            dict: Possible keys are "bbox", "segm", "proposal", and
+            values are corresponding filenames.
+        """
+        bbox_json_results = []
+        segm_json_results = [] if 'masks' in results[0] else None
+        instance_id = 0
+        for idx, result in enumerate(results):
+            image_id = result.get('img_id', idx)
+            labels = result['labels']
+            bboxes = result['bboxes']
+            scores = result['scores']
+            # bbox results
+            for i, label in enumerate(labels):
+                instance_id+=1
+                data = dict()
+                data['image_id'] = image_id
+                data['id'] = instance_id
+                data['bbox'] = self.xyxy2xywh(bboxes[i])
+                data['score'] = float(scores[i])
+                data['category_id'] = self.cat_ids[label]
+                bbox_json_results.append(data)
+
+            if segm_json_results is None:
+                continue
+
+            # segm results
+            masks = result['masks']
+            mask_scores = result.get('mask_scores', scores)
+            for i, label in enumerate(labels):
+                data = dict()
+                data['image_id'] = image_id
+                data['bbox'] = self.xyxy2xywh(bboxes[i])
+                data['score'] = float(mask_scores[i])
+                data['category_id'] = self.cat_ids[label]
+                if isinstance(masks[i]['counts'], bytes):
+                    masks[i]['counts'] = masks[i]['counts'].decode()
+                data['segmentation'] = masks[i]
+                segm_json_results.append(data)
+
+        result_files = dict()
+        result_files['bbox'] = f'{outfile_prefix}/pred.json'
+        result_files['proposal'] = f'{outfile_prefix}.bbox.json'
+        
+        coco_format_results = {
+            "images": self.images,
+            "annotations": bbox_json_results,
+            "categories": self.categories,
+        }
+        
+        dump(coco_format_results, result_files['bbox'])
+
+        if segm_json_results is not None:
+            result_files['segm'] = f'{outfile_prefix}.segm.json'
+            dump(segm_json_results, result_files['segm'])
+
+        return result_files
