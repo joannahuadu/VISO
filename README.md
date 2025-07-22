@@ -4,4 +4,4 @@ This is the official implementation of our paper VISO: Accelerating In-orbit Obj
 All code, datasets, and pretrained models will be released soon... :rocket:
 
 ## Overview
-![VISO](figs/overview.png)
+![VISO](figs/overview.jpg)
