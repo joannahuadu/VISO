@@ -20,6 +20,7 @@ We provide the details about the pre-training data in [docs/data](./docs/data.md
 ## Training & Evaluation
 ```bash
 chmod +x tools/dist_train.sh
+./tools/dist_train.sh
 ```
 
 **NOTE:** VISO is pre-trained on 8 GPUs (H800).
