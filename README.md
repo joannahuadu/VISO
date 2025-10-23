@@ -2,7 +2,7 @@
 This is the official implementation of our paper VISO: Accelerating In-orbit Object Detection with Language-Guided Mask Learning and Sparse Inference.
 
 ## 🔥Updates
-`[2025-10-24]:` We release VISO, which includes pre-trained weights, pre-trained data, training code, and sparse inference code. \
+`[2025-10-24]:` We release VISO, which includes pre-trained weights, pre-trained data, training code, and sparse inference code.
 
 ## Overview
 ![VISO](figs/overview.jpg)
@@ -18,22 +18,14 @@ We provide the details about the pre-training data in [docs/data](./docs/data.md
 
 
 ## Training & Evaluation
-
-We adopt the default [training](./tools/train.py) or [evaluation](./tools/test.py) scripts of [mmyolo](https://github.com/open-mmlab/mmyolo).
-We provide the configs for pre-training and fine-tuning in `configs/pretrain` and `configs/finetune_coco`.
-Training YOLO-World is easy:
-
 ```bash
 chmod +x tools/dist_train.sh
-# sample command for pre-training, use AMP for mixed-precision training
-./tools/dist_train.sh configs/pretrain/yolo_world_l_t2i_bn_2e-4_100e_4x8gpus_obj365v1_goldg_train_lvis_minival.py 8 --amp
 ```
+
 **NOTE:** VISO is pre-trained on 8 GPUs (H800).
-Evaluating YOLO-World is also easy:
+Evaluating VISO is also easy:
 
 ```bash
 chmod +x tools/dist_test.sh
 ./tools/dist_test.sh path/to/config path/to/weights 8
 ```
-
-**NOTE:** We mainly evaluate the performance on LVIS-minival for pre-training.
