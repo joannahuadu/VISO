@@ -16,6 +16,9 @@ VISO is developed based on torch==2.0.0+cu118, mmcv==2.0.1, mmdet==3.0.0, mmengi
 
 We provide the details about the pre-training data in [docs/data](./docs/data.md) (Coming soon).
 
+### 3. Pre-trained Weights
+(Coming soon).
+
 ## Training & Evaluation
 ```bash
 chmod +x tools/dist_train.sh
