@@ -21,12 +21,9 @@ We provide the details about the pre-training data in [docs/data](./docs/data.md
 
   | Model | Checkpoint | Checkpoint (EMA) | Size | Resume Checkpoint | Size |
   |---|---|---|---:|---|---:|
-  | VISO-S | `viso_s_epoch_14_state_dict.pth` | `viso_s_epoch_14_ema.pth` | 293 MB |
-  `viso_s_epoch_14.pth` | 1.2 GB |
-  | VISO-M | `viso_m_epoch_14_state_dict.pth` | `viso_m_epoch_14_ema.pth` | 353 MB |
-  `viso_m_epoch_14.pth` | 1.4 GB |
-  | VISO-L | `viso_l_epoch_14_state_dict.pth` | `viso_l_epoch_14_ema.pth` | 424 MB |
-  `viso_l_epoch_14.pth` | 1.7 GB |
+  | VISO-S | `viso_s_epoch_14_state_dict.pth` | `viso_s_epoch_14_ema.pth` | 293 MB | `viso_s_epoch_14.pth` | 1.2 GB |
+  | VISO-M | `viso_m_epoch_14_state_dict.pth` | `viso_m_epoch_14_ema.pth` | 353 MB | `viso_m_epoch_14.pth` | 1.4 GB |
+  | VISO-L | `viso_l_epoch_14_state_dict.pth` | `viso_l_epoch_14_ema.pth` | 424 MB |`viso_l_epoch_14.pth` | 1.7 GB |
 
 ## Training & Evaluation
 ```bash
