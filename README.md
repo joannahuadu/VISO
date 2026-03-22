@@ -17,7 +17,16 @@ VISO is developed based on torch==2.0.0+cu118, mmcv==2.0.1, mmdet==3.0.0, mmengi
 We provide the details about the pre-training data in [docs/data](./docs/data.md) (Coming soon).
 
 ### 3. Pre-trained Weights
-(Coming soon).
+[Huadu/VISO_checkpoints](https://huggingface.co/Huadu/VISO_checkpoints)
+
+  | Model | Checkpoint | Checkpoint (EMA) | Size | Resume Checkpoint | Size |
+  |---|---|---|---:|---|---:|
+  | VISO-S | `viso_s_epoch_14_state_dict.pth` | `viso_s_epoch_14_ema.pth` | 293 MB |
+  `viso_s_epoch_14.pth` | 1.2 GB |
+  | VISO-M | `viso_m_epoch_14_state_dict.pth` | `viso_m_epoch_14_ema.pth` | 353 MB |
+  `viso_m_epoch_14.pth` | 1.4 GB |
+  | VISO-L | `viso_l_epoch_14_state_dict.pth` | `viso_l_epoch_14_ema.pth` | 424 MB |
+  `viso_l_epoch_14.pth` | 1.7 GB |
 
 ## Training & Evaluation
 ```bash
@@ -32,3 +41,16 @@ Evaluating VISO is also easy:
 chmod +x tools/dist_test.sh
 ./tools/dist_test.sh <path/to/config> <path/to/weights> <gpus>
 ```
+ ## Citation
+
+If you find this project useful, please cite:
+
+```bibtex
+@inproceedings{wang2025viso,
+  title={VISO: Accelerating In-orbit Object Detection with Language-Guided Mask Learning and
+Sparse Inference},
+  author={Wang, Meiqi and Qiu, Han},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
+  pages={23300--23310},
+  year={2025}
+}
