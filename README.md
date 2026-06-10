@@ -10,7 +10,7 @@ In-orbit object detection is essential for Earth observation missions on satelli
 
 ## Getting started
 ### 1. Installation
-VISO is developed based on torch==2.0.0+cu118, mmcv==2.0.1, mmdet==3.0.0, mmengine==0.10.7, mmyolo==0.6.0, mmrotate==1.0.0rc1 (compiled from source). Check more details about requirements in [docs/installation](./docs/installation.md) (Coming soon).
+VISO is developed based on torch==2.0.0+cu118, mmcv==2.0.1, mmdet==3.0.0, mmengine==0.10.7, mmyolo==0.6.0, mmrotate==1.0.0rc1 (compiled from source).
 
 ### 2. Preparing Data
 
